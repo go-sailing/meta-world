@@ -19,7 +19,7 @@ export async function verifyAgentOwnership(
     params.agentId ||
     params.id ||
     query.agent_id ||
-    (body && (body.from_agent_id || body.to_agent_id));
+    (body && (body.agent_id || body.from_agent_id || body.to_agent_id));
 
   if (!agentId) return;
 

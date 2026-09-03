@@ -16,7 +16,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.post(
     '/auth/register',
     {
-      preHandler: app.rateLimit({ max: 5, timeWindow: 60 * 1000 }),
+      preHandler: app.rateLimit({ max: 10, timeWindow: 60 * 1000 }),
       schema: { body: registerBody } as any,
     },
     async (req, reply) => {
@@ -42,7 +42,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.post(
     '/auth/login',
     {
-      preHandler: app.rateLimit({ max: 10, timeWindow: 60 * 1000 }),
+      preHandler: app.rateLimit({ max: 20, timeWindow: 60 * 1000 }),
       schema: { body: registerBody } as any,
     },
     async (req, reply) => {

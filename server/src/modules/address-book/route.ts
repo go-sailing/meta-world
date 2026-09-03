@@ -39,7 +39,12 @@ export async function addressBookRoutes(app: FastifyInstance) {
         );
         reply.code(201).send(entry);
       } catch (err: any) {
-        reply.code(400).send({ error: err.code || 'BAD_REQUEST', message: err.message || '' });
+        const status =
+          err.code === 'FORBIDDEN' ? 403 :
+          err.code === 'ALREADY_IN_ADDRESS_BOOK' ? 409 :
+          err.code === 'ENTRY_NOT_FOUND' ? 404 :
+          400;
+        reply.code(status).send({ error: err.code || 'BAD_REQUEST', message: err.message || '' });
       }
     }
   );

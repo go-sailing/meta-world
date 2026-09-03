@@ -81,5 +81,6 @@ export const agentService = {
 function maskEmail(email: string): string {
   if (!email || !email.includes('@')) return '';
   const [name, domain] = email.split('@');
-  return `${name.charAt(0)}${'*'.repeat(Math.max(name.length - 1, 1))}@${domain}`;
+  if (name.length <= 1) return `*@${domain}`;
+  return `${name.charAt(0)}***@${domain}`;
 }
