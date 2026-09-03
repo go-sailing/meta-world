@@ -1,21 +1,23 @@
 import { FastifyInstance } from 'fastify';
-import { z } from 'zod';
 import { letterService } from './service.js';
+
+// 手动 zod schema（只用于 parse，Fastify 用运行时校验）
+const sendLetterBody = {
+  type: 'object',
+  required: ['from_agent_id', 'to_agent_id', 'body'],
+  properties: {
+    from_agent_id: { type: 'string', format: 'uuid' },
+    to_agent_id: { type: 'string', format: 'uuid' },
+    subject: { type: 'string', maxLength: 50 },
+    body: { type: 'string', maxLength: 2000 },
+  },
+} as const;
 
 export async function letterRoutes(app: FastifyInstance) {
   // POST /api/mail/send — 发送信件
   app.post(
     '/mail/send',
-    {
-      schema: {
-        body: z.object({
-          from_agent_id: z.string().uuid(),
-          to_agent_id: z.string().uuid(),
-          subject: z.string().max(50).optional(),
-          body: z.string().max(2000),
-        }),
-      },
-    },
+    { schema: { body: sendLetterBody } as any },
     async (req, reply) => {
       try {
         const id = await letterService.send(req.body as any);

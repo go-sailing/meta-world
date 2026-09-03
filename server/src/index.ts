@@ -8,9 +8,7 @@ import { chatRoutes } from './modules/chat/route.js';
 import { letterRoutes } from './modules/letter/route.js';
 
 async function bootstrap() {
-  const app = Fastify({
-    logger: false,  // 用我们自己的 pino logger
-  });
+  const app = Fastify({ logger: false });
 
   // 初始化数据库（建表 + sqlite-vec）
   getDb();
@@ -29,7 +27,9 @@ async function bootstrap() {
   // 全局错误处理
   app.setErrorHandler((err, _req, reply) => {
     logger.error(err, 'Unhandled error');
-    reply.status(500).send({ error: err.message });
+    // Fastify 校验错误自带正确的 status code（400/422），不要覆盖
+    const status = (err as any).statusCode ?? 500;
+    reply.status(status).send({ error: err.message });
   });
 
   try {
