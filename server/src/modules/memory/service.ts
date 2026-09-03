@@ -56,7 +56,22 @@ export async function extractAndStore(
   for (const item of items) {
     try {
       const embedding = await embed(item.content);
-      memoryRepo.insertWithVector({ ...item, embedding });
+      if (embedding) {
+        memoryRepo.insertWithVector({ ...item, embedding });
+      } else {
+        // Embedding 不可用时：只存 memory_item 不存向量
+        // 这样文字记录还在，但后续无法通过向量召回
+        const db = await import('../../db/index.js').then(m => m.getDb());
+        db.prepare(
+          `INSERT INTO memory_item
+            (memory_id, agent_id, layer, target_agent_id, content, confidence, source_type, source_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+        ).run(
+          item.memory_id, item.agent_id, item.layer,
+          item.target_agent_id || null, item.content, item.confidence,
+          item.source_type, item.source_id
+        );
+      }
       ids.push(item.memory_id);
     } catch (err) {
       logger.error({ err: (err as Error).message, item }, 'Failed to embed & store memory');

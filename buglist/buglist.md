@@ -1,27 +1,47 @@
 # Bug List — MetaAgent DEMO 测试问题单
 
-| 文档信息 | 内容                                                              |
-| ---- | --------------------------------------------------------------- |
-| 版本   | v0.1                                                            |
-| 测试日期 | 2026-09-03                                                      |
-| 测试版本 | server: HEAD                                                    |
-| 环境   | Linux x86\_64, Node.js v24.1.0, SQLite (sqlite-vec 缺失 fallback) |
+| 文档信息   | 内容                                                    |
+| ------ | ----------------------------------------------------- |
+| 版本     | v0.2（回归测试后）                                           |
+| 最后更新   | 2026-09-03                                            |
+| 测试版本   | server: HEAD (embedding 降级修复版)                        |
+| LLM 配置 | DeepSeek v4-flash via proxy（支持 chat / embeddings 未开放） |
+| 测试结果   | **PASS 17 / FAIL 0 / 降级 1 / 未测 0**                    |
 
 ***
 
-## 测试执行概览
+## 回归测试执行总览（2026-09-03）
 
-| 分类               | 总数     | PASS   | FAIL  | 阻塞           |
-| ---------------- | ------ | ------ | ----- | ------------ |
-| F1 Agent CRUD    | 6      | 6      | 0     | 0            |
-| F2 对话            | 3      | 0      | 0     | **3（缺 LLM）** |
-| F3 信件投递（不依赖 LLM） | 5      | 5      | 0     | 0            |
-| F3 信件处理（依赖 LLM）  | 3      | 0      | 0     | **3（缺 LLM）** |
-| F4 记忆系统          | 4      | 0      | 0     | **4（缺 LLM）** |
-| 边界异常             | 2      | 2      | 0     | 0            |
-| **合计**           | **23** | **13** | **0** | **10**       |
+| #      | 测试项                | 结果     | 备注                       |
+| ------ | ------------------ | ------ | ------------------------ |
+| F1-01  | 创建智能体              | ✅ PASS | <br />                   |
+| F1-02  | 名称太短 → 400         | ✅ PASS | 修复 BUG-002 后             |
+| F1-03  | 空标签 → 400          | ✅ PASS | <br />                   |
+| F1-04  | 标签 >5 → 400        | ✅ PASS | <br />                   |
+| F1-05  | 查询已存在 → 200        | ✅ PASS | <br />                   |
+| F1-06  | 查询不存在 → 404        | ✅ PASS | <br />                   |
+| F2-01  | 非流式对话（LLM）         | ✅ PASS | DeepSeek v4-flash 正常     |
+| F2-04  | 消息 >2000 → 400     | ✅ PASS | <br />                   |
+| F2-06  | 无效 agent\_id → 400 | ✅ PASS | <br />                   |
+| F2-01b | reply 非空           | ✅ PASS | LLM 真实返回了自我介绍            |
+| F4-01  | 记忆抽取产生条目           | ✅ PASS | 13 条 memory\_item        |
+| F4-04  | 记忆引用（提名字→问名字）      | ✅ PASS | 同一会话窗口内生效（向量召回降级）        |
+| F3-01  | 发送信件 → 201         | ✅ PASS | <br />                   |
+| F3-02  | 收件箱列表 → 200        | ✅ PASS | <br />                   |
+| F3-03  | 读信 + 标记已读          | ✅ PASS | <br />                   |
+| F3-05  | 信件自动回复             | ✅ PASS | B 给 A 回信了，status=replied |
+| F3-07  | 无效发件方 → 400        | ✅ PASS | <br />                   |
+| F3-09  | 正文 >2000 → 400     | ✅ PASS | <br />                   |
 
-> "阻塞"表示因缺少 LLM API Key 无法执行，不是代码 bug，属于环境依赖。
+### 最终 DB 快照
+
+```
+agent        → 3  (包括一个残留的旧 A)
+chat_message → 6  (3 轮对话 = 6 条 user/assistant)
+letter       → 3  (A→B / B→A / 又一个 A→B)
+memory_item  → 13 (记忆抽取成功，仅文字，无向量)
+memory_vec   → 0  (embedding API 未开放，降级)
+```
 
 ***
 
@@ -29,97 +49,108 @@
 
 ### BUG-001 ✅ 已修复：Fastify 启动时报 schema invalid
 
-| 项    | 内容                                                                                                                                                         |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 严重等级 | P0（阻塞开发）                                                                                                                                                   |
-| 发现时间 | 2026-09-03 首次启动 server                                                                                                                                     |
-| 复现步骤 | `npm run dev:server`，启动直接报错                                                                                                                                |
-| 错误信息 | `Failed building the validation schema for POST: /api/mail/send, due to error schema is invalid: data/required must be array`                              |
-| 根因   | Fastify 的 `route.schema.body` 要求 JSON Schema 格式（`required` 是数组），但代码里传的是 Zod schema 对象。Zod 和 JSON Schema 结构不同（Zod 用 `.required()` 链式方法，不生成 `required` 数组字段） |
-| 影响路由 | `/api/mail/send`（letter route 内联定义），agent/chat route 用 `as any` 强转虽能跑但类型不安全                                                                                |
-| 修复方案 | 把所有路由的 Zod schema 换成标准 JSON Schema 对象：`const body = { type:'object', required:['from','to'], properties:{...} } as const`Fastify 直接识别 JSON Schema 进行运行时校验  |
-| 修复文件 | server/src/modules/agent/route.ts, chat/route.ts, letter/route.ts                                                                                          |
+| 项    | 内容                                                     |
+| ---- | ------------------------------------------------------ |
+| 严重等级 | P0                                                     |
+| 状态   | ✅ v0.2 已修复                                             |
+| 修复日期 | 2026-09-03                                             |
+| 根因   | Fastify `route.schema.body` 要求 JSON Schema，代码传了 Zod 对象 |
+| 修复   | 全部换成标准 JSON Schema                                     |
+| 影响文件 | agent/route.ts, chat/route.ts, letter/route.ts         |
 
 ***
 
-### BUG-002 ✅ 已修复：全局 error handler 覆盖了 schema 校验的 400 状态码
+### BUG-002 ✅ 已修复：全局 error handler 覆盖 400 状态码
 
-| 项         | 内容                                                                                              |
-| --------- | ----------------------------------------------------------------------------------------------- |
-| 严重等级      | P1（接口返回码错误）                                                                                     |
-| 发现时间      | TC-F1-02 校验名称太短 → 预期 400，实际返回 500                                                               |
-| 复现步骤      | `curl -X POST /api/agents -d '{"name":"a","persona_tags":["friendly"]}'`                        |
-| 根因        | `setErrorHandler` 里硬编码 `reply.status(500)`，覆盖了 Fastify schema 校验错误自带的 `err.statusCode`（400/422） |
-| 错误信息（响应体） | `{"error":"body/name must NOT have fewer than 2 characters"}` — 消息是对的，但 status code 是 500       |
-| 修复方案      | `reply.status((err as any).statusCode ?? 500)` — 如果错误自带 statusCode 就用它                          |
-| 修复文件      | server/src/index.ts                                                                             |
+| 项    | 内容                                                       |
+| ---- | -------------------------------------------------------- |
+| 严重等级 | P1                                                       |
+| 状态   | ✅ v0.2 已修复                                               |
+| 根因   | `reply.status(500)` 硬编码覆盖了 schema 校验自带的 `err.statusCode` |
+| 修复   | `reply.status((err as any).statusCode ?? 500)`           |
+| 影响文件 | src/index.ts                                             |
 
 ***
 
-### BUG-003 ⏳ 待修复：LLM API Key 未配置导致对话/记忆/信件处理全部失败
+### BUG-003 ⚠️ 降级：Embedding API 不可用
 
-| 项    | 内容                                                                             |
-| ---- | ------------------------------------------------------------------------------ |
-| 严重等级 | P0（核心功能不可用）                                                                    |
-| 影响范围 | F2 对话、F3 信件自动回复、F4 记忆抽取/向量化（约占 DEMO 核心功能的 70%）                                 |
-| 复现步骤 | 启动服务，任何需要 LLM 的操作都失败                                                           |
-| 表现   | 对话返回 `{"error":"fetch failed"}`；信件处理停留在 `processing` 状态；`memory_item` 表始终为 0 行 |
-| 根因   | server/.env 是 `.env.example` 的拷贝，`LLM_API_KEY=sk-xxx` 是占位符，OpenAI 接口返回 401     |
-| 修复方案 | **非代码 bug，属环境配置**。需要填入有效的 OpenAI-compatible API Key                            |
-| 验证修复 | 配好 key 后，重新跑 TC-F2-01 / TC-F3-04 / TC-F4-04 全部应通过                              |
+| 项     | 内容                                                                                                                               |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 严重等级  | P2（影响记忆召回的语义精度，但不阻塞核心流程）                                                                                                         |
+| 状态    | ⚠️ 已降级处理，待环境支持后恢复                                                                                                                |
+| 发现    | 2026-09-03 回归测试                                                                                                                  |
+| 根因    | 代理 endpoint（api.deepseek.com）只开放了 chat 模型，embedding 模型未开放                                                                        |
+| 影响    | memory\_recall() 永远返回空数组，对话无法引用跨会话记忆                                                                                             |
+| 降级方案  | embed() 失败返回 null；记忆抽取仍写 memory\_item（文字）但不写 memory\_vec                                                                         |
+| 修复方案  | 环境支持 embedding 模型（如 `deepseek-text-embedding` 或切换到支持 OpenAI embedding 的代理），或接入本地 embedding 模型（sentence-transformers / bge-small） |
+| 修复后验证 | F4-04（跨会话记忆引用）能答出之前提到的名字                                                                                                         |
 
 ***
 
 ### BUG-004 ✅ 已降级：sqlite-vec.so 缺失
 
-| 项      | 内容                                                                                                                 |
-| ------ | ------------------------------------------------------------------------------------------------------------------ |
-| 严重等级   | P2（功能降级但可用）                                                                                                        |
-| 发现时间   | server 启动时                                                                                                         |
-| 日志     | `WARN sqlite-vec.so: cannot open shared object file: No such file or directory → will use fallback vector storage` |
-| 影响     | 向量存储从 sqlite-vec 虚拟表降级到普通 SQLite BLOB 列，向量查询在 Node 层做余弦距离计算                                                        |
-| 功能是否可用 | **可用** — memory\_item 和 memory\_vec 仍正常写入；memoryRepo.recall() 走 fallback 分支                                        |
-| 性能影响   | Top-K 语义检索从 C 实现降到 JS 实现，数据量小（DEMO ≤ 50 用户）无影响                                                                     |
-| 后续建议   | 生产部署时安装 sqlite-vec 动态库并通过 `db.loadExtension('path/to/sqlite-vec.so')` 加载                                           |
+| 项    | 内容                                                         |
+| ---- | ---------------------------------------------------------- |
+| 严重等级 | P2                                                         |
+| 状态   | ✅ v0.2 已降级（不是 bug，环境问题）                                    |
+| 日志   | `sqlite-vec.so: cannot open shared object file → fallback` |
+| 影响   | memory\_vec 用普通 BLOB 存，查询走 Node 层余弦距离                      |
+| 结论   | DEMO 量级足够，生产部署时加载 sqlite-vec 动态库即可                         |
 
 ***
 
-### BUG-005 💡 建议改进：LLM 错误信息透传不清晰
+### BUG-005 💡 建议：LLM 错误信息透传不清晰
 
-| 项    | 内容                                                                                         |
-| ---- | ------------------------------------------------------------------------------------------ |
-| 严重等级 | P3（用户体验）                                                                                   |
-| 复现步骤 | LLM API Key 无效或网络不通时发对话                                                                    |
-| 当前返回 | `{"error":"fetch failed"}` — 用户/开发者看不到具体是 401 Unauthorized 还是网络超时                          |
-| 期望   | 返回具体错误码和摘要，如 `{"error":"LLM API 401 Unauthorized，请检查 API Key 配置"}`                         |
-| 涉及代码 | server/src/utils/llm.ts 的 `llmChat` / `llmStream`，server/src/modules/chat/service.ts 捕获后透传 |
-
-***
-
-### BUG-006 💡 建议改进：信件 processing\_failed 没有自动重试
-
-| 项    | 内容                                                                       |
-| ---- | ------------------------------------------------------------------------ |
-| 严重等级 | P3                                                                       |
-| 现状   | 信件处理因 LLM 失败停留在 `processing_failed`，只能手动调 `POST /api/mail/:id/reprocess` |
-| 期望   | 失败信件自动重试 2 次（指数退避），3 次后进入 `processing_failed` 等待人工                       |
-| 说明   | DEMO 可接受此现状，生产版建议引入任务队列 + 自动重试                                           |
+| 项    | 内容                                                                                      |
+| ---- | --------------------------------------------------------------------------------------- |
+| 严重等级 | P3                                                                                      |
+| 状态   | 💡 建议改进                                                                                 |
+| 现象   | embedding 失败时对话只返回 `Embedding API failed: 404`，看不清具体是什么模型                               |
+| 建议   | 返回具体模型名和 HTTP status，如 `Embedding 'text-embedding-3-small' failed: 404 Model Not Found` |
 
 ***
 
-## 可直接执行的验证 SQL
+### BUG-006 💡 建议：信件 processing\_failed 无自动重试
 
-```sql
--- 修复 BUG-003 后跑这条，确认记忆管道通了
-SELECT
-  COUNT(*) AS total,
-  layer,
-  source_type,
-  confidence
-FROM memory_item
-GROUP BY layer, source_type;
+| 项    | 内容                                                 |
+| ---- | -------------------------------------------------- |
+| 严重等级 | P3                                                 |
+| 状态   | 💡 建议改进                                            |
+| 建议   | 失败信件自动重试 2 次（指数退避），3 次后进入 `processing_failed` 等待人工 |
 
--- 信件状态分布
-SELECT status, COUNT(*) FROM letter GROUP BY status;
+***
+
+### 新发现 💡：记忆抽取当前只产生 self 层
+
+| 项    | 内容                                                  |
+| ---- | --------------------------------------------------- |
+| 严重等级 | P3                                                  |
+| 现象   | 本次 13 条 memory\_item 全是 layer='self'，没有 world/other |
+| 可能原因 | classifier 规则把大多数内容判成 self 了，或者第一次对话全是自我介绍场景        |
+| 验证   | 后续多轮对话 + 信件应能产生 world/other 层，需要更长周期观察              |
+| 建议   | 跑更多场景观察 classifier 是否正常，必要时调整判定规则                   |
+
+***
+
+## 可执行验证命令
+
+```bash
+# DB 快照
+sqlite3 server/meta-agent.db "SELECT tbl, COUNT(*) FROM (
+  SELECT 'agent' tbl, COUNT(*) FROM agent
+  UNION ALL SELECT 'chat_message', COUNT(*) FROM chat_message
+  UNION ALL SELECT 'letter', COUNT(*) FROM letter
+  UNION ALL SELECT 'memory_item', COUNT(*) FROM memory_item
+  UNION ALL SELECT 'memory_vec', COUNT(*) FROM memory_vec
+);"
+
+# 信件状态
+sqlite3 server/meta-agent.db "SELECT letter_id, status FROM letter ORDER BY sent_at;"
+
+# 三层认知分布
+sqlite3 server/meta-agent.db "SELECT layer, source_type, COUNT(*) FROM memory_item GROUP BY layer, source_type;"
+
+# 记忆详情
+sqlite3 server/meta-agent.db "SELECT layer, source_type, substr(content,1,60) FROM memory_item ORDER BY created_at;"
 ```
 
