@@ -44,6 +44,15 @@ export const letterRepo = {
     ).run(id);
   },
 
+  countUnreadForAgent(agentId: string): number {
+    const db = getDb();
+    return (
+      db.prepare(
+        `SELECT COUNT(*) AS c FROM letter WHERE to_agent_id = ? AND status = 'delivered'`
+      ).get(agentId) as any
+    ).c as number;
+  },
+
   listInbox(agentId: string): LetterListItem[] {
     const db = getDb();
     const rows = db

@@ -1,4 +1,5 @@
 import type { ChatRequest } from '@meta-world/shared';
+import { useAuthStore } from '../stores/auth';
 
 export async function chatStream(
   params: ChatRequest,
@@ -8,11 +9,22 @@ export async function chatStream(
     onError: (msg: string) => void;
   }
 ): Promise<void> {
+  const authStore = useAuthStore();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`;
+
   const res = await fetch('/api/chat/stream', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(params),
   });
+
+  if (res.status === 401) {
+    authStore.logout();
+    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+    handlers.onError('登录已过期');
+    return;
+  }
 
   if (!res.ok || !res.body) {
     handlers.onError('请求失败');
