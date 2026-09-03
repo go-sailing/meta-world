@@ -3,16 +3,23 @@ node_modules/
 
 # Build output
 dist/
+web/dist/
+shared/dist/
+server/dist/
 *.tsbuildinfo
 
 # Database (runtime)
 *.db
 *.db-shm
 *.db-wal
+server/meta-agent.db
+server/meta-agent.db-shm
+server/meta-agent.db-wal
 
 # Environment
 .env
 .env.local
+server/.env
 
 # IDE
 .vscode/
