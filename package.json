@@ -1,0 +1,20 @@
+{
+  "name": "meta-world",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MetaAgent DEMO - 具备对话、信件与认知能力的智能体",
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "dev:server": "npm -w server run dev",
+    "dev:web": "npm -w web run dev",
+    "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:web\"",
+    "build": "npm run build -w shared && npm run build -w server && npm run build -w web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}

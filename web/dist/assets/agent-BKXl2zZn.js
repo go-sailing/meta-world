@@ -1,0 +1,1 @@
+import{i as n,g as o}from"./index-CwsipHGm.js";const s=n("agent",()=>{const e=o(null);function r(t){e.value=t,localStorage.setItem("meta-agent-current",JSON.stringify(t))}function a(){const t=localStorage.getItem("meta-agent-current");if(t)try{e.value=JSON.parse(t)}catch{}}return{current:e,setAgent:r,loadFromStorage:a}});export{s as u};
