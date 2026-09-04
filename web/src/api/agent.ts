@@ -20,6 +20,8 @@ export const agentApi = {
 
   disable: (id: string) => request(`/agents/${id}/disable`, { method: 'PUT' }),
 
+  enable: (id: string) => request(`/agents/${id}/enable`, { method: 'PUT' }),
+
   hardDelete: (id: string) => request(`/agents/${id}`, { method: 'DELETE' }),
 
   discover: (params: { keyword?: string; page?: number; size?: number }) => {

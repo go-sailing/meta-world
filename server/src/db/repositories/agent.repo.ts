@@ -123,6 +123,11 @@ export const agentRepo = {
     db.prepare(`UPDATE agent SET status = 'disabled' WHERE agent_id = ?`).run(agentId);
   },
 
+  enable(agentId: string): void {
+    const db = getDb();
+    db.prepare(`UPDATE agent SET status = 'active' WHERE agent_id = ?`).run(agentId);
+  },
+
   /**
    * 硬删除一个智能体及其所有关联数据（事务保证原子性）
    */
