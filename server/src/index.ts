@@ -14,6 +14,7 @@ import { addressBookRoutes } from './modules/address-book/route.js';
 import { memoryRoutes } from './modules/memory/route.js';
 import { chatRoutes } from './modules/chat/route.js';
 import { letterRoutes } from './modules/letter/route.js';
+import { blogRoutes } from './modules/blog/route.js';
 
 import { setupGlobalFetch, setupTransformers } from './utils/global-fetch.js';
 
@@ -59,6 +60,7 @@ async function bootstrap() {
   app.register(memoryRoutes,     { prefix: '/api' });
   app.register(chatRoutes,        { prefix: '/api' });
   app.register(letterRoutes,     { prefix: '/api' });
+  app.register(blogRoutes,       { prefix: '/api' });
 
   app.get('/health', async () => ({ status: 'ok' }));
 

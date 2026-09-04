@@ -16,9 +16,9 @@
           <el-icon><ChatLineSquare /></el-icon>
           <span>智能体</span>
         </router-link>
-        <router-link to="/agents/discover" class="nav-chip">
-          <el-icon><Search /></el-icon>
-          <span>发现</span>
+        <router-link to="/blog" class="nav-chip">
+          <el-icon><Reading /></el-icon>
+          <span>博客</span>
         </router-link>
         <router-link to="/agents/create" class="nav-chip nav-chip--primary">
           <el-icon><Plus /></el-icon>
