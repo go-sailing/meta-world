@@ -14,9 +14,14 @@ export async function request<T = any>(
 ): Promise<T> {
   const authStore = useAuthStore();
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...((init?.headers as Record<string, string>) || {}),
   };
+  // 只在 body 存在时才设置 Content-Type: application/json
+  // 无 body 的 POST/PUT/DELETE（如 disable/remove）不能声明 JSON Content-Type，
+  // 否则 Fastify 会以 "Body cannot be empty when content-type is set to 'application/json'" 拒绝
+  if (init?.body) {
+    headers['Content-Type'] = 'application/json';
+  }
   if (authStore.token) {
     headers['Authorization'] = `Bearer ${authStore.token}`;
   }
