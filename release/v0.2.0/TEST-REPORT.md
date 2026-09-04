@@ -1,19 +1,18 @@
 # MetaAgent v0.2.0 测试报告
 
-执行时间: 2026-09-03 11:00:36
+执行时间: 2026-09-04 03:05:19
 
 ## 概览
 
-| 指标  | 值     |
-| --- | ----- |
-| 通过  | 71    |
-| 失败  | 4     |
-| 跳过  | 2     |
-| 总计  | 77    |
+| 指标 | 值 |
+|------|-----|
+| 通过 | 71 |
+| 失败 | 4 |
+| 跳过 | 2 |
+| 总计 | 77 |
 | 通过率 | 92.2% |
 
 ## 详细日志
-
 ```
 
 [0;36m===== 0. 健康检查 =====[0m
@@ -22,7 +21,7 @@
 
 [0;36m===== 1. 用户注册 F1 (正常流) =====[0m
 [0;32m[PASS][0m TC-F1-01 Alice 正常注册 (HTTP 201)
-[0;32m[PASS][0m TC-F1-01 user_id=834d9cbf-c24e-4009-a19c-bd96f3e34dcd
+[0;32m[PASS][0m TC-F1-01 user_id=c49c9cb5-e2df-4eff-bb10-c469dc194e41
 [0;32m[PASS][0m TC-F1-03 邮箱格式校验 (HTTP 400)
 [0;32m[PASS][0m TC-F1-03b (HTTP 400)
 [0;32m[PASS][0m TC-F1-03c (HTTP 400)
@@ -31,11 +30,11 @@
 [0;32m[PASS][0m TC-F1-05b 密码 < 8 位 (HTTP 400)
 [0;32m[PASS][0m TC-F1-02 重复邮箱 (HTTP 409)
 [0;32m[PASS][0m Bob 注册 (HTTP 201)
-[0;36m[INFO][0m Bob UID=4957c884-9039-45ea-ab9e-b291d0cdbd28
+[0;36m[INFO][0m Bob UID=536c0b88-c0d9-4bb4-910a-eed39e1dd9d3
 
 [0;36m===== 2. 用户登录 F2 =====[0m
 [0;32m[PASS][0m TC-F2-01 Alice 正常登录 (HTTP 200)
-[0;32m[PASS][0m TC-F2-01 user_id 一致 (834d9cbf-c24e-4009-a19c-bd96f3e34dcd)
+[0;32m[PASS][0m TC-F2-01 user_id 一致 (c49c9cb5-e2df-4eff-bb10-c469dc194e41)
 [0;32m[PASS][0m TC-F2-02 密码错误 (401) (HTTP 401)
 [0;32m[PASS][0m TC-F2-03 邮箱不存在 (401) (HTTP 401)
 [0;32m[PASS][0m TC-F2-02/03 返回结构一致 (防枚举)
@@ -59,7 +58,7 @@
 [0;32m[PASS][0m TC-F4-03 同用户重名 (HTTP 409)
 [0;32m[PASS][0m TC-F4-03 错误码 (HTTP 1)
 [0;32m[PASS][0m TC-F4-04 跨用户重名允许 (Bob→天气助手) (HTTP 201)
-[0;36m[INFO][0m AG_B1=51df8057-6a0a-42af-8068-32c2f5690e51
+[0;36m[INFO][0m AG_B1=9d88b9fc-961f-4d73-89e6-e2fc2b90178c
 [0;32m[PASS][0m Bob 创建私有 (HTTP 201)
 [0;36m[INFO][0m TC-F4-05 Alice 智能体上限测试
 [0;32m[PASS][0m TC-F4-05 超过 10 个上限拦截 (HTTP 400)
@@ -100,7 +99,7 @@
 
 [0;36m===== 10. 通讯录 F10/F11 =====[0m
 [0;32m[PASS][0m TC-F10-01 Bob 添加 B1→A1 (HTTP 201)
-[0;32m[PASS][0m TC-F10-01 entry_id=fe8c0e30-af5c-4d1f-b3ba-fda260a34450
+[0;32m[PASS][0m TC-F10-01 entry_id=93c0f0dd-f36a-4fcf-9a3c-5cc0200a0c99
 [0;32m[PASS][0m TC-F10-02 重复添加 (HTTP 409)
 [0;32m[PASS][0m TC-F10-03 不能加自己 (HTTP 400)
 [0;32m[PASS][0m TC-F10-05 跨用户 owner (403) (HTTP 403)
@@ -129,13 +128,13 @@
 
 [0;36m===== 14. 数据库检查 =====[0m
 [0;36m[INFO][0m --- user ---
-alice@demo.com|$2b$12$.rb...
-bob@demo.com|$2b$12$AV7...
-ratelimit_1_1788433229_19933@demo.com|$2b$12$HOd...
-ratelimit_2_1788433229_19933@demo.com|$2b$12$dsX...
+alice@demo.com|$2b$12$Q6F...
+bob@demo.com|$2b$12$diH...
+ratelimit_1_1788491112_2140@demo.com|$2b$12$FWb...
+ratelimit_2_1788491112_2140@demo.com|$2b$12$4a2...
 [0;36m[INFO][0m --- agent 归属 ---
-4957c884-9039-45ea-ab9e-b291d0cdbd28|4
-834d9cbf-c24e-4009-a19c-bd96f3e34dcd|9
+536c0b88-c0d9-4bb4-910a-eed39e1dd9d3|4
+c49c9cb5-e2df-4eff-bb10-c469dc194e41|9
 [0;36m[INFO][0m --- agent public/private ---
 0|active|10
 1|active|3
@@ -144,4 +143,3 @@ ratelimit_2_1788433229_19933@demo.com|$2b$12$dsX...
 
 [0;36m===== 汇总: PASS=71 / FAIL=4 / SKIP=2 / TOTAL=77 / 通过率=92.2% =====[0m
 ```
-

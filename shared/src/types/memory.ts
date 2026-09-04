@@ -17,3 +17,14 @@ export interface MemoryVecRow {
   rowid: string;
   embedding: number[];
 }
+
+/** v0.3.0 新增：列表查询的增强项（带目标智能体名称） */
+export interface MemoryListItem extends MemoryItem {
+  target_agent_name: string | null;
+}
+
+/** v0.3.0 新增：列表响应 */
+export interface MemoryListResponse {
+  total: number;
+  items: MemoryListItem[];
+}

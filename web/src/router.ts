@@ -59,6 +59,12 @@ const router = createRouter({
           component: () => import('./views/AddressBook.vue'),
           meta: { requiresAuth: true },
         },
+        {
+          path: '/memory/:agentId',
+          name: 'Memory',
+          component: () => import('./views/MemoryView.vue'),
+          meta: { requiresAuth: true },
+        },
       ],
     },
   ],

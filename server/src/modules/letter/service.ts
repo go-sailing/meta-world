@@ -1,5 +1,6 @@
 import { agentRepo } from '../../db/repositories/agent.repo.js';
 import { letterRepo } from '../../db/repositories/letter.repo.js';
+import { letterProcessLogRepo } from '../../db/repositories/letter-process-log.repo.js';
 import { processLetter } from './processor.js';
 import { logger } from '../../utils/logger.js';
 import type { SendLetterRequest } from '@meta-world/shared';
@@ -47,10 +48,53 @@ export const letterService = {
 
   reprocess(id: string) {
     letterRepo.updateStatus(id, 'delivered');
+    // v0.3.0: 清空旧日志
+    letterProcessLogRepo.clearByLetter(id);
     setImmediate(() => {
       processLetter(id).catch(err =>
         logger.error(err, `reprocessLetter failed: ${id}`)
       );
     });
+  },
+
+  /** v0.3.0: 查询已发送信件 */
+  listSent(agentId: string) {
+    return letterRepo.listSent(agentId);
+  },
+
+  /**
+   * v0.3.0: 查询信件处理日志
+   * 归属校验：发件方或收件方任一归属于当前用户即可
+   */
+  getLogs(letterId: string, userId: string) {
+    const letter = letterRepo.getById(letterId);
+    if (!letter) return null;
+
+    // 归属检查
+    const fromAgent = agentRepo.getById(letter.from_agent_id);
+    const toAgent = agentRepo.getById(letter.to_agent_id);
+    const isOwner =
+      (fromAgent && fromAgent.owner_user_id === userId) ||
+      (toAgent && toAgent.owner_user_id === userId);
+    if (!isOwner) return null;
+
+    // 查日志 + 补充信件概要
+    const logs = letterProcessLogRepo.listByLetter(letterId);
+    return {
+      letter: {
+        letter_id: letter.letter_id,
+        from_name: fromAgent?.name || '(已删除)',
+        to_name: toAgent?.name || '(已删除)',
+        subject: letter.subject,
+        status: letter.status,
+        sent_at: letter.sent_at,
+      },
+      logs: logs.map(l => ({
+        seq: l.seq,
+        event_type: l.event_type,
+        detail: l.detail ? JSON.parse(l.detail) : null,
+        created_at: l.created_at,
+      })),
+    };
   },
 };

@@ -44,6 +44,17 @@ export async function letterRoutes(app: FastifyInstance) {
     }
   );
 
+  // GET /api/mail/sent — v0.3.0 新增
+  app.get(
+    '/mail/sent',
+    { preHandler: [verifyAuth, verifyAgentOwnership] },
+    async (req, reply) => {
+      const { agent_id } = req.query as { agent_id: string };
+      if (!agent_id) return reply.code(400).send({ error: 'agent_id required' });
+      reply.send(letterService.listSent(agent_id));
+    }
+  );
+
   // GET /api/mail/:id
   app.get('/mail/:id', { preHandler: [verifyAuth] }, async (req, reply) => {
     const id = (req.params as { id: string }).id;
@@ -56,6 +67,14 @@ export async function letterRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: 'FORBIDDEN' });
     }
     reply.send(letter);
+  });
+
+  // GET /api/mail/:id/logs — v0.3.0 新增
+  app.get('/mail/:id/logs', { preHandler: [verifyAuth] }, async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    const result = letterService.getLogs(id, getAuthUser(req).sub);
+    if (!result) return reply.code(404).send({ error: 'LETTER_NOT_FOUND' });
+    reply.send(result);
   });
 
   // POST /api/mail/:id/reprocess

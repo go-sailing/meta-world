@@ -83,4 +83,26 @@ CREATE TABLE IF NOT EXISTS memory_item (
 CREATE INDEX IF NOT EXISTS idx_memory_agent_layer ON memory_item(agent_id, layer);
 CREATE INDEX IF NOT EXISTS idx_memory_confidence   ON memory_item(confidence);
 
--- ------ 7. 向量表（sqlite-vec 虚拟表，由 db/index.ts 动态创建） ------
+-- ------ 7. 信件处理日志表 (v0.3.0 新增) ------
+CREATE TABLE IF NOT EXISTS letter_process_log (
+    log_id      TEXT PRIMARY KEY,
+    letter_id   TEXT NOT NULL REFERENCES letter(letter_id) ON DELETE CASCADE,
+    seq         INTEGER NOT NULL,
+    event_type  TEXT NOT NULL CHECK(event_type IN (
+                    'letter_received',
+                    'llm_called',
+                    'memories_extracted',
+                    'reply_decision',
+                    'reply_sent',
+                    'processing_error'
+                )),
+    detail      TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (letter_id, seq)
+);
+CREATE INDEX IF NOT EXISTS idx_lpl_letter_seq ON letter_process_log(letter_id, seq);
+
+-- ------ 8. 信件表索引增强 (v0.3.0) ------
+CREATE INDEX IF NOT EXISTS idx_letter_from_sent ON letter(from_agent_id, sent_at DESC);
+
+-- ------ 9. 向量表（sqlite-vec 虚拟表，由 db/index.ts 动态创建） ------
