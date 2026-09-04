@@ -1,10 +1,12 @@
 import type { ChatRequest } from '@meta-world/shared';
 import { useAuthStore } from '../stores/auth';
+import type { ToolStepView } from '../stores/chat';
 
 export async function chatStream(
   params: ChatRequest,
   handlers: {
     onToken: (content: string) => void;
+    onTools: (steps: ToolStepView[]) => void;
     onDone: (memory_refs: string[]) => void;
     onError: (msg: string) => void;
   }
@@ -52,8 +54,9 @@ export async function chatStream(
       try {
         const data = JSON.parse(dataStr);
         if (event === 'token') handlers.onToken(data.content);
-        if (event === 'done')  handlers.onDone(data.memory_refs ?? []);
-        if (event === 'error') handlers.onError(data.message);
+        else if (event === 'tools') handlers.onTools(data);
+        else if (event === 'done') handlers.onDone(data.memory_refs ?? []);
+        else if (event === 'error') handlers.onError(data.message);
       } catch {
         // ignore parse errors
       }

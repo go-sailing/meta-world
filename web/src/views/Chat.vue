@@ -1,47 +1,50 @@
 <template>
-  <el-container style="height: 100%;">
-    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; height: auto; padding: 12px 20px;">
-      <div>
-        <h3 style="margin:0;">{{ agent?.name }}</h3>
-        <el-tag v-for="t in agent?.persona_tags" :key="t" size="small" style="margin-right:4px;">{{ t }}</el-tag>
+  <div class="chat-page">
+    <!-- 顶部栏 -->
+    <div class="chat-header">
+      <div class="agent-name">{{ agent?.name }}</div>
+      <div class="header-actions">
+        <el-button link size="small" @click="$router.push(`/memory/${agentId}`)">🧠 记忆</el-button>
+        <el-button link size="small" @click="$router.push(`/mailbox/${agentId}`)">📬 信件</el-button>
       </div>
-      <div style="display:flex; gap:8px;">
-        <el-button @click="$router.push(`/address-book/${agentId}`)">📒 通讯录</el-button>
-        <el-button @click="$router.push(`/mailbox/${agentId}`)">📬 信件箱</el-button>
-      </div>
-    </el-header>
+    </div>
 
-    <el-main style="display:flex; flex-direction:column; overflow:hidden; padding:0;">
-      <!-- 消息列表 -->
-      <div ref="scrollRef" style="flex:1; overflow-y:auto; padding:20px; background:#f5f5f5;">
-        <el-empty v-if="chat.messages.length === 0" description="开始和你的智能体聊天吧" />
-        <div v-for="(msg, i) in chat.messages" :key="i" style="display:flex; margin-bottom:16px;"
-             :style="{ justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }">
-          <el-card :style="{ maxWidth: '70%', background: msg.role === 'user' ? '#409eff' : '#fff', color: msg.role === 'user' ? '#fff' : '#333' }">
-            <span style="white-space:pre-wrap;">{{ msg.content }}</span>
-          </el-card>
+    <!-- 消息区 -->
+    <div ref="scrollRef" class="message-list">
+      <el-empty v-if="chat.messages.length === 0" description="和智能体聊点什么吧..." :image-size="80" />
+      
+      <div v-for="(msg, i) in chat.messages" :key="i" 
+           class="msg-row" :class="msg.role">
+        <!-- 工具调用卡片（内嵌在 assistant 消息里） -->
+        <ToolCallCard 
+          v-for="(step, si) in (msg.toolSteps || [])" 
+          :key="'tc-' + si"
+          :tool-name="step.toolName" 
+          :args="step.args"
+          :result="step.result" 
+          :success="(step.result as any)?.success" 
+        />
+        <!-- 消息正文 -->
+        <div v-if="msg.content" class="bubble">
+          {{ msg.content }}
         </div>
       </div>
+    </div>
 
-      <!-- 输入框 -->
-      <div style="padding:16px; border-top:1px solid #eee; background:#fff;">
-        <div style="display:flex; gap:8px;">
-          <el-input
-            v-model="inputMsg"
-            type="textarea"
-            :rows="2"
-            placeholder="输入消息..."
-            @keydown.enter.ctrl="send"
-            :disabled="chat.isStreaming"
-          />
-          <el-button type="primary" :loading="chat.isStreaming" @click="send" style="align-self:flex-end;">
-            发送
-          </el-button>
-        </div>
-        <div style="font-size:12px; color:#999; margin-top:4px;">Ctrl + Enter 发送</div>
-      </div>
-    </el-main>
-  </el-container>
+    <!-- 输入区 -->
+    <div class="input-area">
+      <el-input
+        v-model="inputMsg"
+        type="textarea"
+        :rows="2"
+        placeholder="和智能体聊点什么... (Ctrl+Enter 发送)"
+        @keydown.enter.ctrl="send"
+        :disabled="chat.isStreaming"
+        resize="none"
+      />
+      <el-button type="primary" :loading="chat.isStreaming" @click="send">发送</el-button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -51,6 +54,7 @@ import { useAgentStore } from '../stores/agent';
 import { useChatStore } from '../stores/chat';
 import { chatStream } from '../api/chat';
 import { ElMessage } from 'element-plus';
+import ToolCallCard from '../components/ToolCallCard.vue';
 
 const route = useRoute();
 const agentId = route.params.agentId as string;
@@ -84,6 +88,10 @@ async function send() {
       { agent_id: agentId, message: msg },
       {
         onToken: (t) => { chat.appendLastToken(t); scrollToBottom(); },
+        onTools: (steps) => {
+          chat.appendToolSteps(steps);
+          scrollToBottom();
+        },
         onDone: () => {},
         onError: (m) => { ElMessage.error(m); },
       }
@@ -104,3 +112,80 @@ function scrollToBottom() {
   });
 }
 </script>
+
+<style scoped>
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fafafa;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+}
+.agent-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.msg-row {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.msg-row.user {
+  align-items: flex-end;
+}
+.msg-row.assistant {
+  align-items: flex-start;
+}
+
+.bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-size: 14px;
+}
+.msg-row.user .bubble {
+  background: #409eff;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg-row.assistant .bubble {
+  background: #fff;
+  color: #303133;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.input-area {
+  padding: 14px 20px;
+  background: #fff;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.input-area :deep(.el-textarea__inner) {
+  border-radius: 8px;
+}
+</style>
