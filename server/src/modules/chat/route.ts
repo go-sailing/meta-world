@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { chatService } from './service.js';
 import { chatRepo } from '../../db/repositories/chat.repo.js';
-import { verifyAuth, verifyAgentOwnership } from '../../middleware/index.js';
+import { verifyAuth, verifyAgentOwnership, getAuthUser } from '../../middleware/index.js';
 
 const chatBody = {
   type: 'object',

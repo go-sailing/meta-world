@@ -88,6 +88,7 @@ function handleCommand(cmd: string) {
 
 /* ========== MD3 Top App Bar ========== */
 .layout-app-bar {
+  position: relative;  /* 让子元素 .app-bar-center 的 absolute 相对于此 */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -96,6 +97,7 @@ function handleCommand(cmd: string) {
   background: var(--md-surface);
   border-bottom: 1px solid var(--md-outline-variant);
   flex-shrink: 0;
+  z-index: 10;
 }
 
 .app-bar-leading {
@@ -217,10 +219,15 @@ function handleCommand(cmd: string) {
 }
 
 /* Main */
+.app-layout .el-container {
+  height: 100vh;
+  background: var(--md-surface);
+}
+
 .layout-main {
   padding: 0;
   overflow: auto;
-  height: calc(100vh - 64px);
+  flex: 1;  /* el-container flex-column 下自动填充剩余高度 */
   background: var(--md-surface);
 }
 </style>
