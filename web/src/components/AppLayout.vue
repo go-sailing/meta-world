@@ -1,35 +1,63 @@
 <template>
   <div class="app-layout">
     <el-container>
-      <el-header class="layout-header">
-        <div class="header-left">
-          <h1 class="brand" @click="$router.push('/agents')">🤖 MetaAgent</h1>
-          <nav class="nav">
-            <router-link to="/agents" class="nav-item">我的智能体</router-link>
-            <router-link to="/agents/discover" class="nav-item">🔍 发现</router-link>
-            <router-link to="/agents/create" class="nav-item">+ 新建</router-link>
-          </nav>
+      <!-- ========== MD3 Top App Bar ========== -->
+      <header class="layout-app-bar">
+        <!-- Leading: Brand -->
+        <div class="app-bar-leading">
+          <h1 class="brand" @click="$router.push('/agents')">
+            <span class="brand-icon">🤖</span>
+            <span class="brand-text">MetaAgent</span>
+          </h1>
         </div>
-        <div class="header-right">
+
+        <!-- Center: Navigation -->
+        <nav class="app-bar-center">
+          <router-link
+            to="/agents"
+            class="md-nav-chip"
+          >
+            <el-icon><ChatLineSquare /></el-icon>
+            <span>智能体</span>
+          </router-link>
+          <router-link
+            to="/agents/discover"
+            class="md-nav-chip"
+          >
+            <el-icon><Search /></el-icon>
+            <span>发现</span>
+          </router-link>
+          <router-link
+            to="/agents/create"
+            class="md-nav-chip primary"
+          >
+            <el-icon><Plus /></el-icon>
+            <span>新建</span>
+          </router-link>
+        </nav>
+
+        <!-- Trailing: User Menu -->
+        <div class="app-bar-trailing">
           <el-dropdown @command="handleCommand" trigger="click">
-            <span class="user-info">
-              <el-avatar :size="32" style="background:#409eff">
-                {{ authStore.email?.charAt(0).toUpperCase() || 'U' }}
-              </el-avatar>
-              <span class="email">{{ authStore.email }}</span>
-              <el-icon class="caret"><ArrowDown /></el-icon>
-            </span>
+            <el-avatar :size="36" class="user-avatar">
+              {{ authStore.email?.charAt(0).toUpperCase() || 'U' }}
+            </el-avatar>
             <template #dropdown>
               <el-dropdown-menu>
+                <div class="user-dropdown-header">
+                  <span class="user-email">{{ authStore.email }}</span>
+                </div>
                 <el-dropdown-item command="logout">
-                  <el-icon><SwitchButton /></el-icon> 退出登录
+                  <el-icon><SwitchButton /></el-icon>
+                  退出登录
                 </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
         </div>
-      </el-header>
+      </header>
 
+      <!-- Main -->
       <el-main class="layout-main">
         <router-view />
       </el-main>
@@ -53,53 +81,146 @@ function handleCommand(cmd: string) {
 </script>
 
 <style scoped>
-.app-layout { height: 100vh; }
-.layout-header {
+.app-layout {
+  height: 100vh;
+  background: var(--md-surface);
+}
+
+/* ========== MD3 Top App Bar ========== */
+.layout-app-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #ebeef5;
+  height: 64px;
   padding: 0 24px;
-  background: #fff;
-  height: 60px;
-  line-height: 60px;
+  background: var(--md-surface);
+  border-bottom: 1px solid var(--md-outline-variant);
+  flex-shrink: 0;
 }
-.header-left { display: flex; align-items: center; gap: 32px; }
+
+.app-bar-leading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 200px;
+}
+
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
+  font-size: var(--md-title-large);
+  font-weight: 500;
+  color: var(--md-on-surface);
   cursor: pointer;
   user-select: none;
 }
-.nav { display: flex; gap: 4px; }
-.nav-item {
-  padding: 6px 14px;
-  border-radius: 6px;
-  color: #606266;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all .15s;
+
+.brand-icon {
+  font-size: 24px;
 }
-.nav-item:hover { background: #f5f7fa; color: #409eff; }
-.nav-item.router-link-active { color: #409eff; background: #ecf5ff; }
-.header-right { display: flex; align-items: center; }
-.user-info {
+
+.brand-text {
+  background: linear-gradient(135deg, var(--md-primary) 0%, var(--md-tertiary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Navigation Chips */
+.app-bar-center {
+  display: flex;
+  gap: 4px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.md-nav-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 20px;
+  border-radius: var(--md-shape-full);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-large);
+  font-weight: 500;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  font-family: var(--md-font-family);
+}
+
+.md-nav-chip:hover {
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+}
+
+.md-nav-chip.router-link-active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+.md-nav-chip.router-link-exact-active {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+.md-nav-chip.primary {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.md-nav-chip.primary:hover {
+  background: #5D469A;
+}
+
+.md-nav-chip.primary.router-link-active {
+  background: #4E388F;
+}
+
+/* User */
+.app-bar-trailing {
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
-  padding: 4px 10px;
-  border-radius: 20px;
-  transition: background .15s;
+  min-width: 60px;
+  justify-content: flex-end;
 }
-.user-info:hover { background: #f5f7fa; }
-.email { font-size: 13px; color: #606266; }
-.caret { font-size: 12px; color: #909399; }
+
+.user-avatar {
+  background: var(--md-primary-container) !important;
+  color: var(--md-on-primary-container) !important;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+}
+
+.user-dropdown-header {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid var(--md-outline-variant);
+  margin-bottom: 4px;
+}
+
+.user-email {
+  font-size: var(--md-body-medium);
+  color: var(--md-on-surface);
+  font-weight: 500;
+}
+
+/* Main */
 .layout-main {
   padding: 0;
   overflow: auto;
-  height: calc(100vh - 60px);
+  height: calc(100vh - 64px);
+  background: var(--md-surface);
 }
 </style>
