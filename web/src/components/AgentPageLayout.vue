@@ -24,40 +24,40 @@
         </div>
       </div>
 
-      <!-- 右侧：功能入口 Icon Buttons -->
+      <!-- 右侧：功能入口 Icon Buttons（用命名路由，不依赖具体 URL） -->
       <div class="app-bar-trailing">
         <button
           class="md-icon-btn"
-          @click="$router.push(`/chat/${agentId}`)"
+          @click="go('Chat')"
           aria-label="对话"
-          :title="'对话'"
+          title="对话"
         >
           <el-icon><ChatLineRound /></el-icon>
         </button>
 
         <button
           class="md-icon-btn"
-          @click="$router.push(`/mailbox/${agentId}`)"
+          @click="go('Mailbox')"
           aria-label="邮件"
-          :title="'邮件'"
+          title="邮件"
         >
           <el-icon><Message /></el-icon>
         </button>
 
         <button
           class="md-icon-btn"
-          @click="$router.push(`/memory/${agentId}`)"
+          @click="go('Memory')"
           aria-label="记忆"
-          :title="'记忆'"
+          title="记忆"
         >
           <el-icon><Cpu /></el-icon>
         </button>
 
         <button
           class="md-icon-btn"
-          @click="$router.push(`/address-book/${agentId}`)"
+          @click="go('AddressBook')"
           aria-label="通讯录"
-          :title="'通讯录'"
+          title="通讯录"
         >
           <el-icon><Notebook /></el-icon>
         </button>
@@ -66,30 +66,35 @@
           class="md-icon-btn"
           @click="onSettingsClick"
           aria-label="设置"
-          :title="'设置'"
+          title="设置"
         >
           <el-icon><Setting /></el-icon>
         </button>
       </div>
     </header>
 
-    <!-- ========== 页面内容（插槽） ========== -->
+    <!-- ========== 子页面内容（router-view，切换子路由时不重建父组件） ========== -->
     <div class="agent-page-content">
-      <slot />
+      <router-view />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { agentApi } from '../api/agent';
 import { ElMessage } from 'element-plus';
 
 const route = useRoute();
+const router = useRouter();
 const agent = ref<any>(null);
 
 const agentId = computed(() => route.params.agentId as string);
+
+function go(name: 'Chat' | 'Mailbox' | 'Memory' | 'AddressBook') {
+  router.push({ name, params: { agentId: agentId.value } });
+}
 
 async function loadAgent(id: string) {
   try {
@@ -107,6 +112,7 @@ onMounted(() => {
   if (agentId.value) loadAgent(agentId.value);
 });
 
+// agentId 变化（切换到另一个智能体）时重新拉取；同一 agent 切换子页面不会触发
 watch(() => route.params.agentId, (newId) => {
   if (newId) loadAgent(newId as string);
 });

@@ -80,11 +80,11 @@ function handleCardClick(agent: AgentListItem) {
     ElMessage.warning('该智能体已禁用');
     return;
   }
-  router.push(`/chat/${agent.agent_id}`);
+  router.push({ name: 'Chat', params: { agentId: agent.agent_id } });
 }
 
 function goMailbox(agentId: string) {
-  router.push(`/mailbox/${agentId}`);
+  router.push({ name: 'Mailbox', params: { agentId } });
 }
 
 onMounted(loadAgents);

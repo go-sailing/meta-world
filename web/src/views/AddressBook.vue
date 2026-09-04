@@ -1,6 +1,5 @@
 <template>
-  <AgentPageLayout>
-    <div class="address-content">
+  <div class="address-content">
       <el-row v-if="friends.length" :gutter="20">
         <el-col :span="8" v-for="f in friends" :key="f.entry_id">
           <el-card class="friend-card" shadow="hover">
@@ -49,7 +48,6 @@
         </template>
       </el-dialog>
     </div>
-  </AgentPageLayout>
 </template>
 
 <script setup lang="ts">
@@ -60,7 +58,6 @@ import type { FriendListItem } from '@meta-world/shared';
 import { agentApi } from '../api/agent';
 import { addressBookApi } from '../api/address-book';
 import { sendLetter as sendLetterApi } from '../api/letter';
-import AgentPageLayout from '../components/AgentPageLayout.vue';
 
 const route = useRoute();
 const router = useRouter();

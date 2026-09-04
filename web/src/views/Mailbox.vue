@@ -1,6 +1,5 @@
 <template>
-  <AgentPageLayout>
-    <div class="mailbox-content">
+  <div class="mailbox-content">
       <!-- Tab 切换 -->
       <el-tabs v-model="activeTab" @tab-change="loadCurrent" class="mailbox-tabs">
         <el-tab-pane label="📥 收件箱" name="inbox">
@@ -118,7 +117,6 @@
         </template>
       </el-drawer>
     </div>
-  </AgentPageLayout>
 </template>
 
 <script setup lang="ts">
@@ -127,7 +125,6 @@ import { useRoute } from 'vue-router';
 import { listInbox, listSent, readLetter, getLetterLogs } from '../api/letter';
 import { ElMessage } from 'element-plus';
 import type { Letter, SentLetterListItem, LetterLogsResponse } from '@meta-world/shared';
-import AgentPageLayout from '../components/AgentPageLayout.vue';
 
 const route = useRoute();
 const agentId = route.params.agentId as string;

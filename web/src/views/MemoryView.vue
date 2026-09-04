@@ -1,6 +1,5 @@
 <template>
-  <AgentPageLayout>
-    <div class="memory-content">
+  <div class="memory-content">
       <!-- 筛选栏 -->
       <div class="filter-bar">
         <el-segmented v-model="layerFilter" :options="layerOptions" @change="reload" />
@@ -21,7 +20,7 @@
       <!-- 列表 -->
       <el-empty v-if="!loading && items.length === 0" description="暂无记忆，去对话或发一封信吧 ✨">
         <template #default>
-          <el-button type="primary" @click="$router.push(`/chat/${agentId}`)">开始对话</el-button>
+          <el-button type="primary" @click="$router.push({ name: 'Chat', params: { agentId } })">开始对话</el-button>
         </template>
       </el-empty>
 
@@ -68,7 +67,6 @@
         </div>
       </div>
     </div>
-  </AgentPageLayout>
 </template>
 
 <script setup lang="ts">
@@ -77,7 +75,6 @@ import { useRoute } from 'vue-router';
 import { listMemories } from '../api/memory';
 import { ElMessage } from 'element-plus';
 import type { MemoryListItem } from '@meta-world/shared';
-import AgentPageLayout from '../components/AgentPageLayout.vue';
 
 const route = useRoute();
 const agentId = route.params.agentId as string;

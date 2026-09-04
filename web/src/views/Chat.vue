@@ -1,5 +1,5 @@
 <template>
-  <AgentPageLayout>
+  <div class="chat-inner">
     <!-- ========== 消息区 ========== -->
     <div class="message-list" ref="listRef">
       <el-empty v-if="chat.messages.length === 0"
@@ -78,7 +78,7 @@
         </button>
       </div>
     </div>
-  </AgentPageLayout>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -89,7 +89,6 @@ import { useAuthStore } from '../stores/auth';
 import { chatStream, getHistory } from '../api/chat';
 import { ElMessage } from 'element-plus';
 import ToolCallCard from '../components/ToolCallCard.vue';
-import AgentPageLayout from '../components/AgentPageLayout.vue';
 
 const route = useRoute();
 const chat = useChatStore();
@@ -173,6 +172,13 @@ function scrollToBottom() {
 
 <style scoped>
 /* ========== Chat Page Content ========== */
+.chat-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
 .message-list {
   flex: 1;
   overflow-y: auto;

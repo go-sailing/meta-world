@@ -41,30 +41,46 @@ const router = createRouter({
           component: () => import('./views/Discover.vue'),
           meta: { requiresAuth: true },
         },
+
+        // ========== 智能体工作台（共享标题栏，切换子页面时不重建） ==========
         {
-          path: '/chat/:agentId',
-          name: 'Chat',
-          component: () => import('./views/Chat.vue'),
+          path: '/agent/:agentId',
+          component: () => import('./components/AgentPageLayout.vue'),
           meta: { requiresAuth: true },
+          children: [
+            { path: '', redirect: 'chat' },
+            {
+              path: 'chat',
+              name: 'Chat',
+              component: () => import('./views/Chat.vue'),
+              meta: { requiresAuth: true },
+            },
+            {
+              path: 'mailbox',
+              name: 'Mailbox',
+              component: () => import('./views/Mailbox.vue'),
+              meta: { requiresAuth: true },
+            },
+            {
+              path: 'memory',
+              name: 'Memory',
+              component: () => import('./views/MemoryView.vue'),
+              meta: { requiresAuth: true },
+            },
+            {
+              path: 'address-book',
+              name: 'AddressBook',
+              component: () => import('./views/AddressBook.vue'),
+              meta: { requiresAuth: true },
+            },
+          ],
         },
-        {
-          path: '/mailbox/:agentId',
-          name: 'Mailbox',
-          component: () => import('./views/Mailbox.vue'),
-          meta: { requiresAuth: true },
-        },
-        {
-          path: '/address-book/:agentId',
-          name: 'AddressBook',
-          component: () => import('./views/AddressBook.vue'),
-          meta: { requiresAuth: true },
-        },
-        {
-          path: '/memory/:agentId',
-          name: 'Memory',
-          component: () => import('./views/MemoryView.vue'),
-          meta: { requiresAuth: true },
-        },
+
+        // ========== 旧路径 redirect（兼容书签 / 外部跳转） ==========
+        { path: '/chat/:agentId', redirect: to => ({ name: 'Chat', params: to.params }) },
+        { path: '/mailbox/:agentId', redirect: to => ({ name: 'Mailbox', params: to.params }) },
+        { path: '/memory/:agentId', redirect: to => ({ name: 'Memory', params: to.params }) },
+        { path: '/address-book/:agentId', redirect: to => ({ name: 'AddressBook', params: to.params }) },
       ],
     },
   ],
