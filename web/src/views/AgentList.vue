@@ -1,51 +1,55 @@
 <template>
   <div class="agent-list-page">
-    <el-empty v-if="agents.length === 0" description="还没有智能体，去创建第一个吧～" />
+    <!-- 空状态 -->
+    <div v-if="agents.length === 0" class="agent-list__empty">
+      <el-empty description="还没有智能体，去创建第一个吧～" />
+      <el-button type="primary" size="large" round @click="$router.push('/agents/create')">
+        <el-icon><Plus /></el-icon>
+        新建智能体
+      </el-button>
+    </div>
 
+    <!-- 卡片网格 -->
     <div v-else class="agent-grid">
       <div
         v-for="agent in agents"
         :key="agent.agent_id"
         class="agent-card"
-        :class="{ disabled: agent.status === 'disabled' }"
+        :class="{ 'agent-card--disabled': agent.status === 'disabled' }"
         @click="handleCardClick(agent)"
+        @keydown.enter="handleCardClick(agent)"
         tabindex="0"
         role="button"
         :aria-label="`进入 ${agent.name} 的聊天`"
       >
-        <div class="card-content">
-          <!-- 顶部：头像 + 名称 + 状态 + 邮件徽章 -->
-          <div class="card-header">
-            <el-avatar :size="56" class="agent-avatar">
-              {{ agent.name.charAt(0).toUpperCase() }}
-            </el-avatar>
-            <div class="agent-info">
-              <h3 class="agent-name">{{ agent.name }}</h3>
-              <div class="agent-meta">
-                <el-tag v-if="agent.is_public" size="small" class="md-chip">公开</el-tag>
-                <el-tag v-else size="small" class="md-chip private">私有</el-tag>
-                <el-tag v-if="agent.status === 'disabled'" size="small" type="danger" class="md-chip">已禁用</el-tag>
-              </div>
+        <!-- 卡片头部：头像 + 名称/状态 -->
+        <div class="agent-card__header">
+          <el-avatar :size="48" class="agent-card__avatar">
+            {{ agent.name.charAt(0).toUpperCase() }}
+          </el-avatar>
+          <div class="agent-card__info">
+            <h3 class="agent-card__name">{{ agent.name }}</h3>
+            <div class="agent-card__meta">
+              <span v-if="agent.is_public" class="status-chip status-chip--public">公开</span>
+              <span v-else class="status-chip status-chip--private">私有</span>
+              <span v-if="agent.status === 'disabled'" class="status-chip status-chip--disabled">已禁用</span>
             </div>
-            <!-- 未读邮件徽章（独立点击区） -->
-            <el-badge
-              v-if="agent.unread_count"
-              :value="agent.unread_count"
-              class="mail-badge"
-              @click.stop="goMailbox(agent.agent_id)"
-            >
+          </div>
+          <!-- 邮件徽章（独立点击区） -->
+          <div v-if="agent.unread_count" class="agent-card__mail" @click.stop="goMailbox(agent.agent_id)">
+            <el-badge :value="agent.unread_count" :max="99" class="mail-badge">
               <el-icon class="mail-icon"><Message /></el-icon>
             </el-badge>
           </div>
+        </div>
 
-          <!-- 中部：persona tags -->
-          <div class="agent-tags">
-            <span
-              v-for="tag in agent.persona_tags"
-              :key="tag"
-              class="md-filter-chip"
-            >{{ tag }}</span>
-          </div>
+        <!-- 卡片底部：persona tags -->
+        <div class="agent-card__tags">
+          <span
+            v-for="tag in agent.persona_tags"
+            :key="tag"
+            class="persona-tag"
+          >{{ tag }}</span>
         </div>
       </div>
     </div>
@@ -87,40 +91,63 @@ onMounted(loadAgents);
 </script>
 
 <style scoped>
+/* ===================== 页面容器 ===================== */
 .agent-list-page {
-  padding: 32px;
+  width: 100%;
   max-width: 1280px;
-  margin: 0 auto;
+  margin: 0 auto;           /* 水平居中 */
+  padding: 32px;            /* 四周留白 */
+  box-sizing: border-box;
 }
 
+/* 空状态 */
+.agent-list__empty {
+  width: 100%;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+/* ===================== 卡片网格 ===================== */
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  /* 自适应列数：每列最小 300px，自动填充 */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+  align-items: start;
+  justify-items: stretch;    /* 每列卡片等宽 */
 }
 
-/* ========== Agent Card - MD3 Filled Card ========== */
+/* ===================== 单张卡片 ===================== */
 .agent-card {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 160px;
   background: var(--md-surface-container-low);
   border-radius: var(--md-shape-lg);
   box-shadow: var(--md-elevation-1);
   padding: 20px;
   cursor: pointer;
-  overflow: hidden;
+  box-sizing: border-box;
   transition:
     box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
-    transform 0.2s cubic-bezier(0.2, 0, 0, 1);
-  min-height: 160px;
-  display: flex;
-  flex-direction: column;
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+    background 0.2s;
   border: 1px solid transparent;
+  outline: none;
+  overflow: hidden;
+  position: relative;
 }
 
 .agent-card:hover {
   box-shadow: var(--md-elevation-2);
   transform: translateY(-2px);
   border-color: var(--md-primary-container);
+  background: var(--md-surface-container);
 }
 
 .agent-card:active {
@@ -133,106 +160,115 @@ onMounted(loadAgents);
   outline-offset: 2px;
 }
 
-.agent-card.disabled {
+/* Disabled 态 */
+.agent-card--disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.55;
   pointer-events: auto;
 }
 
-.agent-card.disabled:hover {
+.agent-card--disabled:hover {
   transform: none;
   box-shadow: var(--md-elevation-1);
   border-color: transparent;
+  background: var(--md-surface-container-low);
 }
 
-/* Card content */
-.card-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header */
-.card-header {
+/* ---- 卡片头部 ---- */
+.agent-card__header {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
-.agent-avatar {
+.agent-card__avatar {
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
   font-weight: 500;
+  font-family: var(--md-font-family);
   flex-shrink: 0;
 }
 
-.agent-info {
-  flex: 1;
+.agent-card__info {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.agent-name {
+.agent-card__name {
+  margin: 0 0 6px 0;
+  padding: 0;
   font-family: var(--md-font-family);
   font-size: var(--md-title-large);
   font-weight: 500;
   color: var(--md-on-surface);
-  margin: 0 0 4px 0;
+  line-height: 1.25;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.agent-meta {
+.agent-card__meta {
   display: flex;
-  gap: 6px;
   flex-wrap: wrap;
+  gap: 6px;
 }
 
-/* Tag as MD Chip */
-.md-chip {
-  border-radius: var(--md-shape-full) !important;
-  font-weight: 500;
+/* 状态 Chip */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: var(--md-shape-full);
+  font-family: var(--md-font-family);
   font-size: 11px;
-  padding: 4px 10px !important;
-  height: auto !important;
-  background: var(--md-secondary-container) !important;
-  color: var(--md-on-secondary-container) !important;
-  border: none !important;
+  font-weight: 500;
+  line-height: 1;
 }
 
-.md-chip.private {
-  background: var(--md-surface-container-high) !important;
-  color: var(--md-on-surface-variant) !important;
+.status-chip--public {
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
 }
 
-/* Persona Tags */
-.agent-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: auto;
+.status-chip--private {
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
 }
 
-/* Mail Badge (独立点击区) */
-.mail-badge {
-  margin-left: auto;
+.status-chip--disabled {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+
+/* ---- 邮件图标徽章 ---- */
+.agent-card__mail {
+  flex: 0 0 auto;
   flex-shrink: 0;
 }
 
 .mail-badge :deep(.el-badge__content) {
   background: var(--md-error);
+  color: var(--md-on-error);
   border: none;
-  font-size: 11px;
-  top: 4px;
-  right: 4px;
+  box-shadow: none;
+  font-size: 10px;
+  font-weight: 600;
+  top: 6px;
+  right: 6px;
 }
 
 .mail-icon {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 20px;
   color: var(--md-on-surface-variant);
   cursor: pointer;
-  padding: 10px;
+  padding: 0;
   border-radius: var(--md-shape-full);
   transition: all 0.15s;
 }
@@ -240,5 +276,29 @@ onMounted(loadAgents);
 .mail-icon:hover {
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
+}
+
+/* ---- 卡片底部：Persona Tags ---- */
+.agent-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.persona-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: var(--md-shape-full);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  border: 1px solid var(--md-outline-variant);
+  font-family: var(--md-font-family);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  cursor: default;
 }
 </style>
