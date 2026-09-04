@@ -1,6 +1,18 @@
 import { config } from '../config.js';
 import { logger } from './logger.js';
+import { getProxyAgent } from './global-fetch.js';
 import type { Agent, MemoryItem, ChatMessage } from '@meta-world/shared';
+import type { LlmToolDefinition } from '../tools/types.js';
+
+/** 代理感知的 fetch：有代理时用 undici fetch + dispatcher，否则用 Node 原生 fetch */
+async function llmFetch(url: string, opts: RequestInit): Promise<Response> {
+  const dispatcher = getProxyAgent();
+  if (dispatcher) {
+    const { fetch: undiciFetch } = await import('undici');
+    return undiciFetch(url, { ...opts, dispatcher } as any) as unknown as Response;
+  }
+  return fetch(url, opts);
+}
 
 export interface BuildPromptParams {
   agent: Agent;
@@ -9,10 +21,31 @@ export interface BuildPromptParams {
   userMessage: string;
 }
 
+/** LLM 响应结构（支持 tool_calls） */
+export interface LlmResponse {
+  content: string | null;
+  tool_calls?: Array<{
+    id: string;
+    type: 'function';
+    function: {
+      name: string;
+      arguments: string; // JSON 字符串
+    };
+  }>;
+}
+
 export function buildPrompt(p: BuildPromptParams) {
   const system = `你是一个名为"${p.agent.name}"的 AI 助手。
 你的性格特质：${p.agent.persona_tags.join(', ')}
-请用自然、温暖的语气与用户对话。引用过往记忆时请自然融入，不要提及"根据我的记忆"之类的话。`;
+请用自然、温暖的语气与用户对话。引用过往记忆时请自然融入，不要提及"根据我的记忆"之类的话。
+
+# 重要：工具使用指南
+当你的回复中包含可用工具（tools）时：
+- 如果用户问题涉及**实时信息**（如当前时间、日期、天气等），你**必须**调用对应工具获取真实数据，绝不能凭知识猜测。
+- 如果用户要求**文件操作**（如写文件、读文件、列出文件），你**必须**调用文件工具。
+- 如果用户要求**给其他智能体发消息/信件**，你**必须**调用 send_letter 工具。
+- 只有当你确定能凭已有知识准确回答时，才直接回答不调用工具。
+- 调用工具后，根据工具返回的结果来生成最终回答，不要忽略工具结果。`;
 
   const memoryBlock = p.memories.length
     ? `【过往记忆，供你参考】\n${p.memories.map(m => `- ${m.content}`).join('\n')}`
@@ -40,7 +73,7 @@ export function buildPrompt(p: BuildPromptParams) {
 /** 非流式调用 */
 export async function llmChat(messages: ReturnType<typeof buildPrompt>): Promise<string> {
   const url = `${config.llm.baseUrl}/chat/completions`;
-  const res = await fetch(url, {
+  const res = await llmFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -68,7 +101,7 @@ export async function llmChat(messages: ReturnType<typeof buildPrompt>): Promise
  */
 export async function* llmStream(messages: ReturnType<typeof buildPrompt>): AsyncGenerator<string> {
   const url = `${config.llm.baseUrl}/chat/completions`;
-  const res = await fetch(url, {
+  const res = await llmFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -115,4 +148,69 @@ export async function* llmStream(messages: ReturnType<typeof buildPrompt>): Asyn
       }
     }
   }
+}
+
+/**
+ * 非流式调用（支持 function calling + 自动重试）
+ * 返回结构包含 content 和可选的 tool_calls
+ */
+export async function llmChatWithTools(
+  messages: any[],
+  tools?: LlmToolDefinition[]
+): Promise<LlmResponse> {
+  const url = `${config.llm.baseUrl}/chat/completions`;
+  const body: any = {
+    model: config.llm.model,
+    messages,
+    temperature: 0.7,
+  };
+  if (tools && tools.length > 0) {
+    body.tools = tools;
+    body.tool_choice = 'auto';
+  }
+
+  // 带重试的 fetch：网络故障时最多重试 3 次
+  const MAX_RETRIES = 3;
+  let lastErr: unknown;
+
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const res = await llmFetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.llm.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        logger.error({ status: res.status, err, attempt }, 'LLM API error (tools)');
+        // 网络类错误或 5xx 可重试
+        if (res.status >= 500 || res.status === 429) {
+          await sleep(1000 * (attempt + 1));
+          continue;
+        }
+        throw new Error(`LLM API failed: ${res.status} ${err}`);
+      }
+
+      const json = await res.json();
+      const msg = json.choices[0].message;
+      return {
+        content: msg.content ?? null,
+        tool_calls: msg.tool_calls,
+      };
+    } catch (err: any) {
+      lastErr = err;
+      logger.warn({ attempt, err: err?.message || String(err) }, 'LLM fetch failed, retrying...');
+      await sleep(1000 * (attempt + 1));
+    }
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(r => setTimeout(r, ms));
 }

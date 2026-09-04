@@ -7,6 +7,7 @@ import { config } from './config.js';
 import { logger } from './utils/logger.js';
 import { getDb } from './db/index.js';
 
+import { registerAllTools } from './tools/index.js';
 import { authRoutes } from './modules/auth/route.js';
 import { agentRoutes } from './modules/agent/route.js';
 import { addressBookRoutes } from './modules/address-book/route.js';
@@ -25,30 +26,33 @@ async function bootstrap() {
   // 1. 数据库（含迁移）
   getDb();
 
-  // 2. CORS
+  // 2. 注册工具（v0.4.0 新增）
+  registerAllTools();
+
+  // 3. CORS
   await app.register(cors, { origin: true });
 
-  // 3. JWT
+  // 4. JWT
   await app.register(jwt, {
     secret: config.jwt.secret,
     sign: { expiresIn: config.jwt.expiresIn },
     verify: { algorithms: ['HS256'] },
   });
 
-  // 4. 全局限流
+  // 5. 全局限流
   await app.register(rateLimit, {
     global: false,
     keyGenerator: (req) => req.ip as string,
   });
 
-  // 5. 错误处理
+  // 6. 错误处理
   app.setErrorHandler((err, _req, reply) => {
     logger.error(err, 'Unhandled error');
     const status = (err as any).statusCode ?? 500;
     reply.status(status).send({ error: err.message });
   });
 
-  // 6. 注册业务路由
+  // 7. 注册业务路由
   app.register(authRoutes,        { prefix: '/api' });
   app.register(addressBookRoutes, { prefix: '/api' });
   app.register(agentRoutes,      { prefix: '/api' });

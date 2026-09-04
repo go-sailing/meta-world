@@ -16,6 +16,9 @@ server/meta-agent.db
 server/meta-agent.db-shm
 server/meta-agent.db-wal
 
+# Runtime data (file sandbox, generated at startup)
+data/
+
 # Environment
 .env
 .env.local

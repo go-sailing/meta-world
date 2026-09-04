@@ -1,59 +1,66 @@
 <template>
-  <el-container style="height: 100%;">
-    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; height: auto; padding: 12px 20px;">
-      <div>
-        <h3 style="margin:0;">{{ agent?.name }}</h3>
-        <el-tag v-for="t in agent?.persona_tags" :key="t" size="small" style="margin-right:4px;">{{ t }}</el-tag>
+  <div class="chat-page">
+    <!-- 顶部栏 -->
+    <div class="chat-header">
+      <div class="agent-name">{{ agent?.name }}</div>
+      <div class="header-actions">
+        <el-button link size="small" @click="$router.push(`/memory/${$route.params.agentId}`)">🧠 记忆</el-button>
+        <el-button link size="small" @click="$router.push(`/mailbox/${$route.params.agentId}`)">📬 信件</el-button>
       </div>
-      <div style="display:flex; gap:8px;">
-        <el-button @click="$router.push(`/address-book/${agentId}`)">📒 通讯录</el-button>
-        <el-button @click="$router.push(`/mailbox/${agentId}`)">📬 信件箱</el-button>
-      </div>
-    </el-header>
+    </div>
 
-    <el-main style="display:flex; flex-direction:column; overflow:hidden; padding:0;">
-      <!-- 消息列表 -->
-      <div ref="scrollRef" style="flex:1; overflow-y:auto; padding:20px; background:#f5f5f5;">
-        <el-empty v-if="chat.messages.length === 0" description="开始和你的智能体聊天吧" />
-        <div v-for="(msg, i) in chat.messages" :key="i" style="display:flex; margin-bottom:16px;"
-             :style="{ justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }">
-          <el-card :style="{ maxWidth: '70%', background: msg.role === 'user' ? '#409eff' : '#fff', color: msg.role === 'user' ? '#fff' : '#333' }">
-            <span style="white-space:pre-wrap;">{{ msg.content }}</span>
-          </el-card>
+    <!-- 消息区 -->
+    <div ref="scrollRef" class="message-list">
+      <el-empty v-if="chat.messages.length === 0" description="和智能体聊点什么吧..." :image-size="80" />
+      
+      <div v-for="(msg, i) in chat.messages" :key="i" 
+           class="msg-row" :class="msg.role">
+        <!-- 工具调用卡片（内嵌在 assistant 消息里） -->
+        <ToolCallCard 
+          v-for="(step, si) in (msg.toolSteps || [])" 
+          :key="'tc-' + si"
+          :tool-name="step.toolName" 
+          :args="step.args"
+          :result="step.result" 
+          :success="(step.result as any)?.success" 
+        />
+        <!-- 消息正文 -->
+        <div v-if="msg.content" class="bubble">
+          {{ msg.content }}
+        </div>
+        <!-- 空 assistant 消息：加载指示器 -->
+        <div v-else-if="msg.role === 'assistant' && !msg.content && !msg.toolSteps?.length" class="bubble loading">
+          <span class="dots"><span>.</span><span>.</span><span>.</span></span>
         </div>
       </div>
+    </div>
 
-      <!-- 输入框 -->
-      <div style="padding:16px; border-top:1px solid #eee; background:#fff;">
-        <div style="display:flex; gap:8px;">
-          <el-input
-            v-model="inputMsg"
-            type="textarea"
-            :rows="2"
-            placeholder="输入消息..."
-            @keydown.enter.ctrl="send"
-            :disabled="chat.isStreaming"
-          />
-          <el-button type="primary" :loading="chat.isStreaming" @click="send" style="align-self:flex-end;">
-            发送
-          </el-button>
-        </div>
-        <div style="font-size:12px; color:#999; margin-top:4px;">Ctrl + Enter 发送</div>
-      </div>
-    </el-main>
-  </el-container>
+    <!-- 输入区 -->
+    <div class="input-area">
+      <el-input
+        v-model="inputMsg"
+        type="textarea"
+        :rows="2"
+        placeholder="和智能体聊点什么... (Ctrl+Enter 发送)"
+        @keydown.enter.ctrl="send"
+        :disabled="chat.isStreaming"
+        resize="none"
+      />
+      <el-button type="primary" :loading="chat.isStreaming" @click="send">发送</el-button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, watch, onMounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAgentStore } from '../stores/agent';
-import { useChatStore } from '../stores/chat';
-import { chatStream } from '../api/chat';
+import { useChatStore, type ChatMsg } from '../stores/chat';
+import { chatStream, getHistory } from '../api/chat';
 import { ElMessage } from 'element-plus';
+import ToolCallCard from '../components/ToolCallCard.vue';
 
 const route = useRoute();
-const agentId = route.params.agentId as string;
 const store = useAgentStore();
 const chat = useChatStore();
 
@@ -61,17 +68,44 @@ const inputMsg = ref('');
 const scrollRef = ref<HTMLDivElement>();
 const agent = store.current;
 
+/** 从后端加载当前 agent 历史（仅第一次或切换 agent 时） */
+async function loadHistory(agentId: string) {
+  chat.setAgent(agentId);
+  try {
+    const data = await getHistory(agentId);
+    const msgs: ChatMsg[] = data.messages.map((m: any) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    chat.setMessages(agentId, msgs);
+  } catch {
+    // 新 agent 无历史，保持空
+    chat.setMessages(agentId, []);
+  }
+  await nextTick();
+  scrollToBottom();
+}
+
 onMounted(() => {
-  if (!store.current) {
-    store.loadFromStorage();
+  if (!store.current) store.loadFromStorage();
+  const id = route.params.agentId as string;
+  if (id) loadHistory(id);
+});
+
+// 切换 agent 时自动重新加载
+watch(() => route.params.agentId, (newId) => {
+  if (newId && newId !== chat.currentAgentId) {
+    loadHistory(newId as string);
   }
 });
 
 async function send() {
   const msg = inputMsg.value.trim();
-  if (!msg || chat.isStreaming) return;
+  const id = route.params.agentId as string;
+  if (!msg || chat.isStreaming || !id) return;
   inputMsg.value = '';
 
+  chat.setAgent(id);
   chat.push('user', msg);
   chat.isStreaming = true;
 
@@ -81,9 +115,13 @@ async function send() {
 
   try {
     await chatStream(
-      { agent_id: agentId, message: msg },
+      { agent_id: id, message: msg },
       {
         onToken: (t) => { chat.appendLastToken(t); scrollToBottom(); },
+        onTools: (steps) => {
+          chat.appendToolSteps(steps);
+          scrollToBottom();
+        },
         onDone: () => {},
         onError: (m) => { ElMessage.error(m); },
       }
@@ -104,3 +142,97 @@ function scrollToBottom() {
   });
 }
 </script>
+
+<style scoped>
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fafafa;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid #eee;
+  background: #fff;
+}
+.agent-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+.header-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.message-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.msg-row {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.msg-row.user {
+  align-items: flex-end;
+}
+.msg-row.assistant {
+  align-items: flex-start;
+}
+
+.bubble {
+  max-width: 70%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-size: 14px;
+}
+.msg-row.user .bubble {
+  background: #409eff;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg-row.assistant .bubble {
+  background: #fff;
+  color: #303133;
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* 思考中指示器 */
+.bubble.loading {
+  padding: 10px 18px;
+  color: #909399;
+}
+.bubble.loading .dots span {
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.bubble.loading .dots span:nth-child(1) { animation-delay: -0.32s; }
+.bubble.loading .dots span:nth-child(2) { animation-delay: -0.16s; }
+.bubble.loading .dots span:nth-child(3) { animation-delay: 0s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+.input-area {
+  padding: 14px 20px;
+  background: #fff;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.input-area :deep(.el-textarea__inner) {
+  border-radius: 8px;
+}
+</style>
