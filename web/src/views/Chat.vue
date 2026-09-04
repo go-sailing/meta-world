@@ -47,7 +47,7 @@
           @click="$router.push(`/address-book/${agentId}`)"
           aria-label="通讯录"
         >
-          <el-icon><AddressBook /></el-icon>
+          <el-icon><Notebook /></el-icon>
         </button>
 
         <button
