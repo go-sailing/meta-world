@@ -2,7 +2,6 @@
   <div class="page">
     <div class="page-actions">
       <span class="page-subtitle">通讯录 · {{ agent?.name }}</span>
-      <el-button @click="$router.push(`/chat/${agentId}`)">💬 对话</el-button>
     </div>
 
     <el-row v-if="friends.length" :gutter="20">
