@@ -19,43 +19,47 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/agents',
-    },
-    {
-      path: '/agents',
-      name: 'AgentList',
-      component: () => import('./views/AgentList.vue'),
+      component: () => import('./components/AppLayout.vue'),
       meta: { requiresAuth: true },
-    },
-    {
-      path: '/agents/create',
-      name: 'CreateAgent',
-      component: () => import('./views/CreateAgent.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/agents/discover',
-      name: 'Discover',
-      component: () => import('./views/Discover.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/chat/:agentId',
-      name: 'Chat',
-      component: () => import('./views/Chat.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/mailbox/:agentId',
-      name: 'Mailbox',
-      component: () => import('./views/Mailbox.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/address-book/:agentId',
-      name: 'AddressBook',
-      component: () => import('./views/AddressBook.vue'),
-      meta: { requiresAuth: true },
+      children: [
+        { path: '', redirect: '/agents' },
+        {
+          path: '/agents',
+          name: 'AgentList',
+          component: () => import('./views/AgentList.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: '/agents/create',
+          name: 'CreateAgent',
+          component: () => import('./views/CreateAgent.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: '/agents/discover',
+          name: 'Discover',
+          component: () => import('./views/Discover.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: '/chat/:agentId',
+          name: 'Chat',
+          component: () => import('./views/Chat.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: '/mailbox/:agentId',
+          name: 'Mailbox',
+          component: () => import('./views/Mailbox.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: '/address-book/:agentId',
+          name: 'AddressBook',
+          component: () => import('./views/AddressBook.vue'),
+          meta: { requiresAuth: true },
+        },
+      ],
     },
   ],
 });
@@ -64,9 +68,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
-  // localStorage 有 token 但 store 状态没同步（Pinia 初始值已读 localStorage，所以这里主要校验有效性）
   if (authStore.token && !authStore.user_id) {
-    // 有 token 但缺 user_id → 不完整，清掉
     authStore.logout();
   }
 
@@ -74,7 +76,6 @@ router.beforeEach(async (to) => {
     if (!authStore.isAuthenticated) {
       return { path: '/login', query: { redirect: to.fullPath } };
     }
-    // 用 /auth/me 做真正有效性校验；如果失败，清 token 再跳登录
     try {
       await authApi.me();
     } catch {

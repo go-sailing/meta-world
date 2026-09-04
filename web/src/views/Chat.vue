@@ -1,11 +1,14 @@
 <template>
-  <el-container style="height: 100vh;">
-    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee;">
+  <el-container style="height: 100%;">
+    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; height: auto; padding: 12px 20px;">
       <div>
-        <h2 style="margin:0;">{{ agent?.name }}</h2>
+        <h3 style="margin:0;">{{ agent?.name }}</h3>
         <el-tag v-for="t in agent?.persona_tags" :key="t" size="small" style="margin-right:4px;">{{ t }}</el-tag>
       </div>
-      <el-button @click="$router.push(`/mailbox/${agentId}`)">📬 信件箱</el-button>
+      <div style="display:flex; gap:8px;">
+        <el-button @click="$router.push(`/address-book/${agentId}`)">📒 通讯录</el-button>
+        <el-button @click="$router.push(`/mailbox/${agentId}`)">📬 信件箱</el-button>
+      </div>
     </el-header>
 
     <el-main style="display:flex; flex-direction:column; overflow:hidden; padding:0;">

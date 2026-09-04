@@ -1,10 +1,5 @@
 <template>
   <div class="page">
-    <header class="topbar">
-      <h2>创建智能体</h2>
-      <el-button @click="$router.back()">返回</el-button>
-    </header>
-
     <el-card style="max-width: 500px;">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="名称" prop="name">

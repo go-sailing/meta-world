@@ -1,9 +1,9 @@
 <template>
   <div class="page">
-    <header class="topbar">
-      <h2>通讯录 · {{ agent?.name }}</h2>
+    <div class="page-actions">
+      <span class="page-subtitle">通讯录 · {{ agent?.name }}</span>
       <el-button @click="$router.push(`/chat/${agentId}`)">💬 对话</el-button>
-    </header>
+    </div>
 
     <el-row v-if="friends.length" :gutter="20">
       <el-col :span="8" v-for="f in friends" :key="f.entry_id">

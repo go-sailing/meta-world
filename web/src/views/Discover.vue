@@ -1,17 +1,17 @@
 <template>
   <div class="page">
-    <header class="topbar">
-      <h2>发现智能体</h2>
+    <div class="search-bar">
       <el-input
         v-model="keyword"
         placeholder="搜索智能体名称"
-        style="width: 300px"
         clearable
+        style="width: 320px"
         @keyup.enter="doSearch"
       >
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
-    </header>
+      <el-button type="primary" @click="doSearch">搜索</el-button>
+    </div>
 
     <el-row v-if="items.length" :gutter="20">
       <el-col :span="8" v-for="item in items" :key="item.agent_id">
@@ -126,8 +126,7 @@ onMounted(doSearch);
 
 <style scoped>
 .page { padding: 24px; max-width: 1200px; margin: 0 auto; }
-.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-.topbar h2 { margin: 0; }
+.search-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 24px; }
 
 .discover-card { margin-bottom: 20px; }
 .discover-card h3 { margin: 0 0 4px 0; }

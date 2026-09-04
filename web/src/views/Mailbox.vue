@@ -1,11 +1,14 @@
 <template>
-  <el-container style="height: 100vh;">
-    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee;">
+  <el-container style="height: 100%;">
+    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; height: auto; padding: 12px 20px;">
       <div>
-        <h2 style="margin:0;">📬 信件箱</h2>
+        <h3 style="margin:0;">📬 信件箱</h3>
         <span style="color:#999; font-size:13px;">{{ agent?.name }} 的收件箱</span>
       </div>
-      <el-button @click="$router.push(`/chat/${agentId}`)">← 返回对话</el-button>
+      <div style="display:flex; gap:8px;">
+        <el-button @click="$router.push('/agents')">← 返回主页面</el-button>
+        <el-button @click="$router.push(`/chat/${agentId}`)">💬 对话</el-button>
+      </div>
     </el-header>
 
     <el-main style="padding:20px;">

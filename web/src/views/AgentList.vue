@@ -1,29 +1,5 @@
 <template>
   <div class="page">
-    <header class="topbar">
-      <h2>我的智能体</h2>
-      <div class="actions">
-        <el-link type="primary" :underline="false" @click="$router.push('/agents/discover')">
-          🔍 发现
-        </el-link>
-        <el-button type="primary" @click="$router.push('/agents/create')">+ 新建智能体</el-button>
-        <el-dropdown @command="handleCommand">
-          <span class="user-info">
-            <el-avatar :size="32" style="background:#409eff">
-              {{ authStore.email?.charAt(0).toUpperCase() }}
-            </el-avatar>
-            <span class="email">{{ authStore.email }}</span>
-            <el-icon><ArrowDown /></el-icon>
-          </span>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="logout">退出登录</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
-      </div>
-    </header>
-
     <el-row v-if="agents.length" :gutter="20">
       <el-col :span="8" v-for="agent in agents" :key="agent.agent_id">
         <el-card class="agent-card" shadow="hover">
@@ -76,11 +52,8 @@ import { useRouter } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { AgentListItem } from '@meta-world/shared';
 import { agentApi } from '../api/agent';
-import { useAuthStore } from '../stores/auth';
 
 const router = useRouter();
-const authStore = useAuthStore();
-
 const agents = ref<AgentListItem[]>([]);
 
 async function loadAgents() {
@@ -89,13 +62,6 @@ async function loadAgents() {
     agents.value = res.agents;
   } catch (err: any) {
     ElMessage.error(err.message || '加载失败');
-  }
-}
-
-function handleCommand(cmd: string) {
-  if (cmd === 'logout') {
-    authStore.logout();
-    router.replace('/login');
   }
 }
 
@@ -123,19 +89,6 @@ onMounted(loadAgents);
 
 <style scoped>
 .page { padding: 24px; max-width: 1200px; margin: 0 auto; }
-.topbar {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 24px;
-}
-.topbar h2 { margin: 0; }
-.actions { display: flex; gap: 16px; align-items: center; }
-.user-info {
-  display: flex; align-items: center; gap: 8px; cursor: pointer;
-  padding: 4px 8px; border-radius: 8px;
-}
-.user-info:hover { background: #f0f2f5; }
-.email { font-size: 14px; color: #606266; }
-
 .agent-card { margin-bottom: 20px; }
 .card-header {
   display: flex; justify-content: space-between; align-items: flex-start;
