@@ -20,7 +20,8 @@
 ├── README.md                       # 本文档
 ├── release/                        # PRD / SDD / 测试报告（按版本）
 │   ├── v0.1.0/
-│   └── v0.2.0/
+│   ├── v0.2.0/
+│   └── v0.3.0/                     # 可观测性：记忆查看 / 信件处理日志 / 已发送信件
 ├── scripts/
 │   └── run-test.sh                 # v0.2.0 自动化冒烟测试脚本
 │
@@ -35,18 +36,18 @@
 │       ├── index.ts                # 入口（Fastify 插件注册）
 │       ├── config.ts               # 环境变量读取
 │       ├── db/
-│       │   ├── schema.sql          # 表定义
+│       │   ├── schema.sql          # 表定义（含 v0.3.0 letter_process_log）
 │       │   ├── index.ts            # SQLite 初始化 + 迁移
-│       │   ├── migrations/         # 增量 SQL
-│       │   └── repositories/        # agent / user / address-book / chat / letter / memory
-│       ├── middleware/              # auth (JWT) · ownership (归属)
+│       │   ├── migrations/         # 增量 SQL（001/002/003_add_letter_process_log.sql）
+│       │   └── repositories/       # agent / user / address-book / chat / letter / memory / letter-process-log ★v0.3.0
+│       ├── middleware/              # auth (JWT) · ownership (归属+状态开关)
 │       ├── modules/
 │       │   ├── auth/               # 注册 / 登录 / /me
-│       │   ├── agent/              # CRUD · discover · disable
+│       │   ├── agent/              # CRUD · discover · disable ★ · enable ★（v0.3.0 修复缺失）· hardDelete
 │       │   ├── address-book/       # 通讯录增删查
 │       │   ├── chat/               # 对话（可选 LLM）
-│       │   ├── letter/             # 信件发送 / 收件箱 / 重处理
-│       │   └── memory/             # 长期记忆提取 / 召回
+│       │   ├── letter/             # 信件发送 / 收件箱 / 已发送 ★v0.3.0 / 处理日志 ★v0.3.0 / 重处理
+│       │   └── memory/             # 长期记忆提取 / 召回 / 列表查询 ★v0.3.0
 │       └── utils/                   # llm · embedder · validator · logger
 │
 └── web/                            # 前端（npm workspace: @meta-world/web）
@@ -58,14 +59,15 @@
         ├── components/
         │   └── AppLayout.vue       # 全局布局（顶栏导航 + 用户下拉）
         ├── stores/                 # Pinia: auth · agent · chat
-        ├── api/                    # fetch 封装 + 各模块 API
+        ├── api/                    # fetch 封装 + 各模块 API（agent / auth / letter ★扩展 / memory ★新增）
         └── views/
             ├── LoginView.vue · RegisterView.vue
-            ├── AgentList.vue       # 我的智能体
+            ├── AgentList.vue       # 我的智能体（含 enable ★v0.3.0 按钮）
             ├── CreateAgent.vue     # 新建
             ├── Discover.vue        # 发现公开智能体
             ├── Chat.vue            # 对话
-            ├── Mailbox.vue         # 信件箱
+            ├── Mailbox.vue         # 信件箱 ★v0.3.0 扩展：收件箱+已发送 Tab + 处理日志抽屉
+            ├── MemoryView.vue      # ★v0.3.0 记忆中心（按 layer/source 筛选 + 置信度进度条）
             └── AddressBook.vue     # 通讯录
 ```
 
@@ -112,38 +114,44 @@ npm -w server run start   # 跑 dist/index.js
 
 ## API 速览
 
-| 方法     | 路径                            | 鉴权 | 说明                |
-| ------ | ----------------------------- | -- | ----------------- |
-| POST   | `/api/auth/register`          | ❌  | 邮箱 + 密码注册         |
-| POST   | `/api/auth/login`             | ❌  | 返回 JWT            |
-| GET    | `/api/auth/me`                | ✅  | 当前用户              |
-| GET    | `/api/agents`                 | ✅  | 我的智能体列表           |
-| POST   | `/api/agents`                 | ✅  | 创建（最多 10 个/用户）    |
-| PUT    | `/api/agents/:id`             | ✅  | 修改名称 / is\_public |
-| DELETE | `/api/agents/:id`             | ✅  | 硬删除               |
-| PUT    | `/api/agents/:id/disable`     | ✅  | 禁用                |
-| GET    | `/api/agents/discover`        | ✅  | 发现公开智能体（邮箱脱敏）     |
-| POST   | `/api/address-book`           | ✅  | 添加好友（ALREADY→409） |
-| GET    | `/api/address-book?agent_id=` | ✅  | 通讯录列表             |
-| DELETE | `/api/address-book/:id`       | ✅  | 移除                |
-| POST   | `/api/chat`                   | ✅  | 对话（流式可选）          |
-| POST   | `/api/mail/send`              | ✅  | 发信                |
-| GET    | `/api/mail/inbox?agent_id=`   | ✅  | 收件箱               |
+| 方法     | 路径                            | 鉴权 | 说明                   |
+| ------ | ----------------------------- | -- | -------------------- |
+| POST   | `/api/auth/register`          | ❌  | 邮箱 + 密码注册            |
+| POST   | `/api/auth/login`             | ❌  | 返回 JWT               |
+| GET    | `/api/auth/me`                | ✅  | 当前用户                 |
+| GET    | `/api/agents`                 | ✅  | 我的智能体列表              |
+| POST   | `/api/agents`                 | ✅  | 创建（最多 10 个/用户）       |
+| PUT    | `/api/agents/:id`             | ✅  | 修改名称 / is\_public    |
+| DELETE | `/api/agents/:id`             | ✅  | 硬删除                  |
+| PUT    | `/api/agents/:id/disable`     | ✅  | 禁用                   |
+| GET    | `/api/agents/discover`        | ✅  | 发现公开智能体（邮箱脱敏）        |
+| POST   | `/api/address-book`           | ✅  | 添加好友（ALREADY→409）    |
+| GET    | `/api/address-book?agent_id=` | ✅  | 通讯录列表                |
+| DELETE | `/api/address-book/:id`       | ✅  | 移除                   |
+| POST   | `/api/chat`                   | ✅  | 对话（流式可选）             |
+| POST   | `/api/mail/send`              | ✅  | 发信                   |
+| GET    | `/api/mail/inbox?agent_id=`   | ✅  | 收件箱                  |
+| GET    | `/api/mail/sent?agent_id=`    | ✅  | **已发送信件列表** ★v0.3.0  |
+| GET    | `/api/mail/:id/logs`          | ✅  | **信件处理日志** ★v0.3.0   |
+| PUT    | `/api/agents/:id/enable`      | ✅  | **启用智能体** ★v0.3.0 修复 |
+| DELETE | `/api/agents/:id`             | ✅  | 硬删除（v0.3.0 修复级联清理）   |
+| GET    | `/api/memory/list?agent_id=`  | ✅  | **智能体记忆列表** ★v0.3.0  |
 
 所有请求头：`Authorization: Bearer <JWT>`
 
 ## 前端路由
 
-| 路径                       | 页面      | 说明                     |
-| ------------------------ | ------- | ---------------------- |
-| `/login`                 | 登录      | localStorage 持久化 token |
-| `/register`              | 注册      | <br />                 |
-| `/agents`                | 我的智能体   | AppLayout 全局顶栏         |
-| `/agents/create`         | 新建智能体   | <br />                 |
-| `/agents/discover`       | 发现公开智能体 | <br />                 |
-| `/chat/:agentId`         | 对话      | <br />                 |
-| `/mailbox/:agentId`      | 信件箱     | <br />                 |
-| `/address-book/:agentId` | 通讯录     | <br />                 |
+| 路径                       | 页面      | 说明                           |
+| ------------------------ | ------- | ---------------------------- |
+| `/login`                 | 登录      | localStorage 持久化 token       |
+| `/register`              | 注册      | <br />                       |
+| `/agents`                | 我的智能体   | AppLayout 全局顶栏               |
+| `/agents/create`         | 新建智能体   | <br />                       |
+| `/agents/discover`       | 发现公开智能体 | <br />                       |
+| `/chat/:agentId`         | 对话      | <br />                       |
+| `/mailbox/:agentId`      | 信件箱     | ★v0.3.0 收件箱+已发送 Tab + 处理日志抽屉 |
+| `/memory/:agentId`       | 记忆中心    | ★v0.3.0 按 layer/source 筛选    |
+| `/address-book/:agentId` | 通讯录     | <br />                       |
 
 `router.beforeEach` 每次跳转都会调一次 `/auth/me` 校验 JWT 有效性，过期则自动清 token 并跳登录页（带 `?redirect=` 参数）。
 
@@ -153,13 +161,15 @@ npm -w server run start   # 跑 dist/index.js
 # 运行冒烟测试（清库 + 启动 + 77 条用例，产出 TEST-REPORT 和 TEST-ISSUES）
 bash scripts/run-test.sh
 
-# 预期结果：PASS 71+ / FAIL 0（剩余为脚本缺陷标记）
+# v0.3.0 新增：专项测试脚本（API 级 39 条用例 + 浏览器冒烟）
+# 预期结果：PASS 39/39（100%）
 ```
 
 ## 版本
 
-| 版本     | 说明                                     |
-| ------ | -------------------------------------- |
-| v0.1.0 | 基础对话 + 信件 + 记忆                         |
-| v0.2.0 | 新增用户管理（JWT 鉴权）+ 多智能体归属 + 通讯录 + 发现公开智能体 |
+| 版本     | 说明                                                                                                 |
+| ------ | -------------------------------------------------------------------------------------------------- |
+| v0.1.0 | 基础对话 + 信件 + 记忆                                                                                     |
+| v0.2.0 | 新增用户管理（JWT 鉴权）+ 多智能体归属 + 通讯录 + 发现公开智能体                                                             |
+| v0.3.0 | **可观测性**：记忆查看 API + 信件处理日志 + 信箱已发送 Tab；修复缺失的 enable 路由 + hardDelete 级联清理 + 无 body 请求的 Content-Type |
 
