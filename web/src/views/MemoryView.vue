@@ -1,19 +1,7 @@
 <template>
-  <el-container style="height: 100%;">
-    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; height: auto; padding: 12px 20px;">
-      <div>
-        <h3 style="margin:0;">🧠 记忆中心</h3>
-        <span style="color:#999; font-size:13px;">{{ agent?.name }} 的认知世界</span>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <el-button @click="$router.push('/agents')">← 返回主页面</el-button>
-        <el-button @click="$router.push(`/chat/${agentId}`)">💬 对话</el-button>
-      </div>
-    </el-header>
-
-    <el-main style="padding:20px;">
+  <div class="memory-content">
       <!-- 筛选栏 -->
-      <div style="display:flex; gap:16px; margin-bottom:16px; align-items:center; flex-wrap:wrap;">
+      <div class="filter-bar">
         <el-segmented v-model="layerFilter" :options="layerOptions" @change="reload" />
         <el-select v-model="sourceFilter" placeholder="来源" style="width:160px;" @change="reload">
           <el-option label="全部来源" value="all" />
@@ -32,25 +20,24 @@
       <!-- 列表 -->
       <el-empty v-if="!loading && items.length === 0" description="暂无记忆，去对话或发一封信吧 ✨">
         <template #default>
-          <el-button type="primary" @click="$router.push(`/chat/${agentId}`)">开始对话</el-button>
+          <el-button type="primary" @click="$router.push({ name: 'Chat', params: { agentId } })">开始对话</el-button>
         </template>
       </el-empty>
 
       <div v-else>
-        <div v-for="item in items" :key="item.memory_id"
-             style="padding:16px; border:1px solid #eee; border-radius:8px; margin-bottom:12px; background:#fff;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
-            <div style="display:flex; gap:8px; align-items:center;">
+        <div v-for="item in items" :key="item.memory_id" class="memory-card">
+          <div class="memory-header">
+            <div class="memory-tags">
               <el-tag :type="layerTagType(item.layer)" size="small">{{ layerLabel(item.layer) }}</el-tag>
               <el-tag :type="sourceTagType(item.source_type)" size="small">{{ sourceLabel(item.source_type) }}</el-tag>
               <el-tag v-if="item.target_agent_name" size="small" type="info">🎯 {{ item.target_agent_name }}</el-tag>
             </div>
-            <span style="color:#999; font-size:12px;">{{ formatTime(item.created_at) }}</span>
+            <span class="memory-time">{{ formatTime(item.created_at) }}</span>
           </div>
 
           <!-- 置信度进度条 -->
-          <div style="margin-bottom:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:4px;">
+          <div class="confidence-bar">
+            <div class="confidence-label">
               <span>置信度</span>
               <span>{{ Math.round(item.confidence * 100) }}%</span>
             </div>
@@ -63,13 +50,13 @@
           </div>
 
           <!-- 记忆正文 -->
-          <div style="color:#333; line-height:1.6; font-size:14px; white-space:pre-wrap;">
+          <div class="memory-body">
             {{ item.content }}
           </div>
         </div>
 
         <!-- 分页 -->
-        <div v-if="total > pageSize" style="display:flex; justify-content:center; margin-top:20px;">
+        <div v-if="total > pageSize" class="pagination-wrap">
           <el-pagination
             v-model:current-page="page"
             :page-size="pageSize"
@@ -79,22 +66,18 @@
           />
         </div>
       </div>
-    </el-main>
-  </el-container>
+    </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAgentStore } from '../stores/agent';
 import { listMemories } from '../api/memory';
 import { ElMessage } from 'element-plus';
 import type { MemoryListItem } from '@meta-world/shared';
 
 const route = useRoute();
 const agentId = route.params.agentId as string;
-const store = useAgentStore();
-const agent = computed(() => store.current);
 
 const items = ref<MemoryListItem[]>([]);
 const total = ref(0);
@@ -156,3 +139,68 @@ async function reload() {
 
 onMounted(reload);
 </script>
+
+<style scoped>
+.memory-content {
+  padding: 20px 32px;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.memory-card {
+  padding: 16px;
+  border: 1px solid var(--md-outline-variant, #eee);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: var(--md-surface, #fff);
+}
+
+.memory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.memory-tags {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.memory-time {
+  color: var(--md-outline, #999);
+  font-size: 12px;
+}
+
+.confidence-bar {
+  margin-bottom: 8px;
+}
+
+.confidence-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--md-on-surface-variant, #666);
+  margin-bottom: 4px;
+}
+
+.memory-body {
+  color: var(--md-on-surface, #333);
+  line-height: 1.6;
+  font-size: 14px;
+  white-space: pre-wrap;
+}
+
+.pagination-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+</style>

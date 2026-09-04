@@ -46,11 +46,13 @@ export interface SentLetterListItem {
   letter_id: string;
   to_agent_id: string;
   to_name: string;
-  subject?: string;
+  subject?: string | null;
+  /** 信件原文（前端列表页直接展示完整内容） */
+  body: string;
   status: LetterStatus;
   sent_at: string;
+  /** 是否有过回复（只用于状态提示，不展示回复内容） */
   has_reply: boolean;
-  reply_preview?: string | null;
 }
 
 /** v0.3.0 新增：处理日志事件类型 */

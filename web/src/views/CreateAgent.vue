@@ -76,7 +76,7 @@ async function onSubmit() {
   try {
     const agent = await agentApi.create(form);
     ElMessage.success('创建成功！');
-    router.push(`/chat/${agent.agent_id}`);
+    router.push({ name: 'Chat', params: { agentId: agent.agent_id } });
   } catch (err: any) {
     ElMessage.error(err.message || '创建失败');
   } finally {

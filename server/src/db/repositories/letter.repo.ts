@@ -7,10 +7,10 @@ export interface SentLetterListItem {
   to_agent_id: string;
   to_name: string;
   subject: string | null;
+  body: string;
   status: LetterStatus;
   sent_at: string;
   has_reply: boolean;
-  reply_preview: string | null;
 }
 
 export const letterRepo = {
@@ -86,7 +86,7 @@ export const letterRepo = {
     }));
   },
 
-  /** 查询某智能体发出的所有信件 */
+  /** 查询某智能体发出的所有信件（只展示自己发出去的内容与状态，不展示收到的回复） */
   listSent(agentId: string): SentLetterListItem[] {
     const db = getDb();
     const rows = db
@@ -96,38 +96,27 @@ export const letterRepo = {
             l.to_agent_id,
             a2.name AS to_name,
             l.subject,
+            l.body,
             l.status,
             l.sent_at,
-            r.body AS reply_body
+            EXISTS(SELECT 1 FROM letter r WHERE r.reply_to = l.letter_id) AS has_reply
          FROM letter l
          JOIN agent a2 ON a2.agent_id = l.to_agent_id
-         LEFT JOIN letter r ON r.reply_to = l.letter_id
          WHERE l.from_agent_id = ?
          ORDER BY l.sent_at DESC`
       )
       .all(agentId) as any[];
 
-    // 去重：一封原信可能有多封回复，用 Map 取第一条（最新的已由 ORDER BY 保证在前面）
-    const result: SentLetterListItem[] = [];
-    const seen = new Set<string>();
-
-    rows.forEach(r => {
-      if (seen.has(r.letter_id)) return;
-      seen.add(r.letter_id);
-
-      result.push({
-        letter_id: r.letter_id,
-        to_agent_id: r.to_agent_id,
-        to_name: r.to_name,
-        subject: r.subject,
-        status: r.status as LetterStatus,
-        sent_at: r.sent_at,
-        has_reply: !!r.reply_body,
-        reply_preview: r.reply_body ? r.reply_body.slice(0, 80) : null,
-      });
-    });
-
-    return result;
+    return rows.map(r => ({
+      letter_id: r.letter_id,
+      to_agent_id: r.to_agent_id,
+      to_name: r.to_name,
+      subject: r.subject,
+      body: r.body,
+      status: r.status as LetterStatus,
+      sent_at: r.sent_at,
+      has_reply: !!r.has_reply,
+    }));
   },
 
   /** 判断一封原信是否已有回复 */

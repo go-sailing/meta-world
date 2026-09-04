@@ -1,0 +1,279 @@
+/* ========================================================
+   Element Plus → Material Design 3 主题覆盖
+   ======================================================== */
+
+:root {
+  /* Primary */
+  --el-color-primary: var(--md-primary);
+  --el-color-primary-light-3: #8B7BCF;
+  --el-color-primary-light-5: #B6A9DE;
+  --el-color-primary-light-7: #D4C9E8;
+  --el-color-primary-light-8: #E2DAEE;
+  --el-color-primary-light-9: var(--md-primary-container);
+  --el-color-primary-dark-2: #4E388F;
+
+  /* Functional */
+  --el-color-success: var(--md-success);
+  --el-color-success-light-9: var(--md-success-container);
+  --el-color-warning: var(--md-warning);
+  --el-color-warning-light-9: var(--md-warning-container);
+  --el-color-danger: var(--md-error);
+  --el-color-danger-light-9: var(--md-error-container);
+  --el-color-error: var(--md-error);
+  --el-color-info: var(--md-secondary);
+
+  /* Text */
+  --el-color-text: var(--md-on-surface);
+  --el-color-text-primary: var(--md-on-surface);
+  --el-color-text-regular: var(--md-on-surface-variant);
+  --el-color-text-secondary: var(--md-on-surface-variant);
+  --el-color-text-placeholder: var(--md-outline);
+
+  /* Border */
+  --el-border-radius-base: var(--md-shape-sm);
+  --el-border-color: var(--md-outline-variant);
+  --el-border-color-light: var(--md-outline-variant);
+  --el-border-color-lighter: #F1EFEF;
+
+  /* Fill */
+  --el-fill-color: var(--md-surface-container-high);
+  --el-fill-color-light: var(--md-surface-container);
+  --el-fill-color-blank: transparent;
+
+  /* Background */
+  --el-bg-color: var(--md-surface);
+  --el-bg-color-page: var(--md-surface);
+  --el-bg-color-overlay: var(--md-surface-container-lowest);
+
+  /* Font */
+  --el-font-family: var(--md-font-family);
+}
+
+/* ========== 按钮 MD 化 ========== */
+.el-button {
+  font-family: var(--md-font-family);
+  border-radius: var(--md-shape-full);
+  padding: 8px 20px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.el-button--primary {
+  background: var(--md-primary);
+  border-color: var(--md-primary);
+  color: var(--md-on-primary);
+  box-shadow: none;
+}
+
+.el-button--primary:hover {
+  background: #5D469A;
+  border-color: #5D469A;
+  box-shadow: var(--md-elevation-1);
+}
+
+/* Text button */
+.el-button.is-text,
+.el-button.is-link {
+  border-radius: var(--md-shape-full);
+  padding: 8px 14px;
+  color: var(--md-primary);
+  font-weight: 500;
+}
+
+.el-button.is-text:hover,
+.el-button.is-link:hover {
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+/* ========== 卡片 MD 化 ========== */
+.el-card {
+  border-radius: var(--md-shape-lg) !important;
+  border: none !important;
+  box-shadow: var(--md-elevation-1);
+  background: var(--md-surface-container-low);
+  transition: box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.el-card.is-always-shadow,
+.el-card.is-hover-shadow:hover {
+  box-shadow: var(--md-elevation-2);
+}
+
+/* ========== 输入框 MD 化 ========== */
+.el-input__wrapper {
+  border-radius: var(--md-shape-xs) var(--md-shape-xs) 0 0 !important;
+  box-shadow: 0 1px 0 var(--md-outline) inset !important;
+  background: var(--md-surface-container-high) !important;
+  transition: all 0.2s;
+}
+
+.el-input__wrapper.is-focus,
+.el-input__wrapper.is-textarea {
+  box-shadow: 0 2px 0 var(--md-primary) inset !important;
+}
+
+.el-textarea__inner {
+  border-radius: var(--md-shape-sm) !important;
+  background: var(--md-surface-container-high) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  transition: all 0.2s;
+}
+
+.el-textarea__inner:focus {
+  border-color: var(--md-primary) !important;
+  box-shadow: 0 0 0 2px rgba(103, 80, 164, 0.2) !important;
+}
+
+/* ========== Tag MD 化 ========== */
+.el-tag {
+  border-radius: var(--md-shape-sm);
+  font-weight: 500;
+  font-family: var(--md-font-family);
+}
+
+/* ========== Dialog MD 化 ========== */
+.el-dialog {
+  border-radius: var(--md-shape-xl) !important;
+  box-shadow: var(--md-elevation-3) !important;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--md-outline-variant);
+  margin-right: 0 !important;
+}
+
+.el-dialog__title {
+  font-size: var(--md-headline-small);
+  font-weight: 400;
+  color: var(--md-on-surface);
+}
+
+.el-dialog__body {
+  padding: 20px 24px;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px 24px;
+  border-top: 1px solid var(--md-outline-variant);
+  margin-top: 0;
+}
+
+.el-dialog__headerbtn .el-dialog__close {
+  color: var(--md-on-surface-variant);
+  font-size: 22px;
+}
+
+/* ========== Dropdown Menu MD 化 ========== */
+.el-dropdown-menu {
+  border-radius: var(--md-shape-md) !important;
+  box-shadow: var(--md-elevation-2) !important;
+  border: none !important;
+  padding: 8px;
+  background: var(--md-surface-container-lowest);
+}
+
+.el-dropdown-menu__item {
+  border-radius: var(--md-shape-sm);
+  padding: 10px 16px;
+  color: var(--md-on-surface);
+  font-family: var(--md-font-family);
+}
+
+.el-dropdown-menu__item:hover {
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+}
+
+/* ========== Empty 颜色适配 ========== */
+.el-empty__description p {
+  color: var(--md-on-surface-variant);
+}
+
+/* ========== Badge MD 化 ========== */
+.el-badge__content {
+  background: var(--md-error);
+  border: none;
+  box-shadow: none;
+  font-size: 11px;
+}
+
+/* ========== Tabs MD 化 ========== */
+.el-tabs__item {
+  font-family: var(--md-font-family);
+  font-size: var(--md-label-large);
+  font-weight: 500;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: var(--md-shape-full) var(--md-shape-full) 0 0;
+  transition: all 0.2s;
+}
+
+.el-tabs__item:hover {
+  color: var(--md-primary);
+}
+
+.el-tabs__item.is-active {
+  color: var(--md-primary);
+  font-weight: 500;
+}
+
+.el-tabs__active-bar {
+  background: var(--md-primary);
+  height: 3px;
+  border-radius: 2px 2px 0 0;
+}
+
+.el-tabs__nav-wrap::after {
+  background: var(--md-outline-variant);
+}
+
+/* ========== Avatar MD 化 ========== */
+.el-avatar {
+  font-family: var(--md-font-family);
+  font-weight: 500;
+  background: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+/* ========== Message Box MD 化 ========== */
+.el-message-box {
+  border-radius: var(--md-shape-xl) !important;
+  background: var(--md-surface-container-lowest);
+  border: none !important;
+  box-shadow: var(--md-elevation-3) !important;
+}
+
+/* ========== Form 标签位置 ========== */
+.el-form-item__label {
+  font-family: var(--md-font-family);
+  font-size: var(--md-label-large);
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
+}
+
+/* ========== Pagination MD 化 ========== */
+.el-pagination.is-background .el-pager li {
+  border-radius: var(--md-shape-full);
+  font-weight: 500;
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+/* ========== Segmented MD 化 ========== */
+.el-segmented__item {
+  border-radius: var(--md-shape-full);
+  font-weight: 500;
+}
+
+.el-segmented__item-selected {
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  box-shadow: var(--md-elevation-1);
+}

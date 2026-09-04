@@ -1,20 +1,7 @@
 <template>
-  <el-container style="height: 100%;">
-    <el-header style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; height: auto; padding: 12px 20px;">
-      <div>
-        <h3 style="margin:0;">📬 信件箱</h3>
-        <span style="color:#999; font-size:13px;">{{ agent?.name }} 的邮件</span>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <el-button @click="$router.push('/agents')">← 返回主页面</el-button>
-        <el-button @click="$router.push(`/chat/${agentId}`)">💬 对话</el-button>
-        <el-button @click="$router.push(`/memory/${agentId}`)">🧠 记忆</el-button>
-      </div>
-    </el-header>
-
-    <el-main style="padding:20px;">
+  <div class="mailbox-content">
       <!-- Tab 切换 -->
-      <el-tabs v-model="activeTab" @tab-change="loadCurrent" style="margin-bottom:16px;">
+      <el-tabs v-model="activeTab" @tab-change="loadCurrent" class="mailbox-tabs">
         <el-tab-pane label="📥 收件箱" name="inbox">
           <template #label>
             📥 收件箱
@@ -32,56 +19,58 @@
       <div v-if="activeTab === 'inbox'">
         <div v-for="letter in inbox" :key="letter.letter_id"
              @click="openLetter(letter.letter_id)"
-             style="padding:16px; border:1px solid #eee; border-radius:8px; margin-bottom:12px; cursor:pointer;"
-             :style="{ background: letter.is_unread ? '#ecf5ff' : '#fff' }">
-          <div style="display:flex; justify-content:space-between;">
-            <div>
+             class="letter-card"
+             :class="{ unread: letter.is_unread }">
+          <div class="letter-row">
+            <div class="letter-from">
               <strong>{{ letter.from_name }}</strong>
               <el-tag v-if="letter.is_unread" size="small" type="danger" style="margin-left:8px;">未读</el-tag>
               <el-tag v-if="letter.status === 'replied'" size="small" type="success" style="margin-left:4px;">已回复</el-tag>
               <el-tag v-if="letter.status === 'processing'" size="small" type="warning" style="margin-left:4px;">处理中</el-tag>
               <el-tag v-if="letter.status === 'processing_failed'" size="small" type="danger" style="margin-left:4px;">处理失败</el-tag>
             </div>
-            <span style="color:#999; font-size:12px;">{{ letter.sent_at }}</span>
+            <span class="letter-time">{{ letter.sent_at }}</span>
           </div>
-          <div style="color:#333; margin-top:6px;">{{ letter.subject || '(无主题)' }}</div>
+          <div class="letter-subject">{{ letter.subject || '(无主题)' }}</div>
         </div>
       </div>
 
       <!-- 已发送内容 -->
       <div v-if="activeTab === 'sent'">
         <div v-for="letter in sent" :key="letter.letter_id"
-             @click="openSentLetterLogs(letter.letter_id)"
-             style="padding:16px; border:1px solid #eee; border-radius:8px; margin-bottom:12px; cursor:pointer; background:#fff;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div>
+             @click="openSentLetter(letter)"
+             class="letter-card">
+          <div class="letter-row">
+            <div class="letter-from">
               <strong>→ {{ letter.to_name }}</strong>
-              <el-tag v-if="letter.status === 'sent'" size="small" style="margin-left:8px;">已发送</el-tag>
+              <el-tag v-if="letter.has_reply" size="small" type="success" style="margin-left:8px;">已收到回复</el-tag>
+              <el-tag v-else-if="letter.status === 'sent'" size="small" style="margin-left:8px;">已发送</el-tag>
               <el-tag v-else-if="letter.status === 'delivered'" size="small" type="primary" style="margin-left:8px;">已投递</el-tag>
               <el-tag v-else-if="letter.status === 'processing'" size="small" type="warning" style="margin-left:8px;">对方处理中</el-tag>
-              <el-tag v-else-if="letter.status === 'replied'" size="small" type="success" style="margin-left:8px;">✅ 对方已回复</el-tag>
-              <el-tag v-else-if="letter.status === 'done'" size="small" type="info" style="margin-left:8px;">已读完</el-tag>
               <el-tag v-else-if="letter.status === 'processing_failed'" size="small" type="danger" style="margin-left:8px;">处理失败</el-tag>
+              <el-tag v-else-if="letter.status === 'read'" size="small" type="info" style="margin-left:8px;">对方已读</el-tag>
             </div>
-            <span style="color:#999; font-size:12px;">{{ letter.sent_at }}</span>
+            <span class="letter-time">{{ letter.sent_at }}</span>
           </div>
-          <div style="color:#333; margin-top:6px;">{{ letter.subject || '(无主题)' }}</div>
-          <div v-if="letter.has_reply && letter.reply_preview" style="color:#67C23A; font-size:13px; margin-top:6px;">
-            💬 对方回复: {{ letter.reply_preview }}...
-          </div>
+          <div class="letter-subject">{{ letter.subject || '(无主题)' }}</div>
+          <div class="letter-body-preview">{{ letter.body }}</div>
         </div>
       </div>
 
-      <!-- 收件箱 信件详情 + 处理日志抽屉 -->
-      <el-drawer v-model="detailVisible" title="信件详情" size="560px">
+      <!-- 信件详情抽屉（收件 + 发件共用） -->
+      <el-drawer v-model="detailVisible" :title="detailTitle" size="560px">
         <template v-if="detail">
-          <p><strong>来自：</strong>{{ detail.from_agent_id }}</p>
+          <p v-if="detailMode === 'inbox'"><strong>来自：</strong>{{ detail.from_agent_id }}</p>
+          <p v-else><strong>发送给：</strong>{{ sentDetailTo }}</p>
           <p><strong>主题：</strong>{{ detail.subject || '(无)' }}</p>
           <el-divider />
           <p style="white-space:pre-wrap; line-height:1.6;">{{ detail.body }}</p>
           <el-divider />
-          <div style="display:flex; gap:8px;">
-            <el-button size="small" @click="reprocess">🔄 让智能体重新处理</el-button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <el-button
+              v-if="detailMode === 'inbox'"
+              size="small"
+              @click="reprocess">🔄 让智能体重新处理</el-button>
             <el-button size="small" type="primary" plain @click="showLogs(detail.letter_id)">📋 查看处理日志</el-button>
           </div>
         </template>
@@ -129,22 +118,18 @@
           <el-empty v-else description="暂无处理日志" />
         </template>
       </el-drawer>
-    </el-main>
-  </el-container>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAgentStore } from '../stores/agent';
 import { listInbox, listSent, readLetter, getLetterLogs } from '../api/letter';
 import { ElMessage } from 'element-plus';
 import type { Letter, SentLetterListItem, LetterLogsResponse } from '@meta-world/shared';
 
 const route = useRoute();
 const agentId = route.params.agentId as string;
-const store = useAgentStore();
-const agent = store.current;
 
 const activeTab = ref<'inbox' | 'sent'>('inbox');
 const loading = ref(false);
@@ -155,6 +140,11 @@ const inboxUnread = computed(() => inbox.value.filter(l => l.is_unread).length);
 
 const detail = ref<Letter | null>(null);
 const detailVisible = ref(false);
+const detailMode = ref<'inbox' | 'sent'>('inbox');
+const sentDetailTo = ref('');
+const detailTitle = computed(() =>
+  detailMode.value === 'inbox' ? '信件详情（收件）' : '信件详情（已发送）'
+);
 
 const logsData = ref<LetterLogsResponse | null>(null);
 const logsVisible = ref(false);
@@ -180,6 +170,7 @@ async function loadCurrent() {
 async function openLetter(id: string) {
   try {
     detail.value = await readLetter(id);
+    detailMode.value = 'inbox';
     detailVisible.value = true;
     // 刷新列表（已读状态可能变了）
     if (activeTab.value === 'inbox') {
@@ -190,9 +181,20 @@ async function openLetter(id: string) {
   }
 }
 
-async function openSentLetterLogs(id: string) {
-  // 对于已发送信件，直接打开处理日志
-  showLogs(id);
+/** 打开已发送详情：直接使用列表已返回的 body，不再请求后端 */
+function openSentLetter(item: SentLetterListItem) {
+  detailMode.value = 'sent';
+  sentDetailTo.value = `${item.to_name} (${item.to_agent_id})`;
+  detail.value = {
+    letter_id: item.letter_id,
+    from_agent_id: agentId,
+    to_agent_id: item.to_agent_id,
+    subject: item.subject || undefined,
+    body: item.body,
+    status: item.status,
+    sent_at: item.sent_at,
+  } as Letter;
+  detailVisible.value = true;
 }
 
 async function showLogs(letterId: string) {
@@ -209,7 +211,6 @@ async function reprocess() {
   try {
     await fetch(`/api/mail/${detail.value.letter_id}/reprocess`, { method: 'POST' });
     ElMessage.success('已触发重新处理，稍后查看日志');
-    // 重新打开日志抽屉（等处理完成后数据更新）
     setTimeout(async () => {
       await showLogs(detail.value!.letter_id);
     }, 500);
@@ -275,3 +276,54 @@ function statusTagType(s: string): '' | 'primary' | 'success' | 'warning' | 'dan
   } as any)[s] || '';
 }
 </script>
+
+<style scoped>
+.mailbox-content {
+  padding: 20px 32px;
+}
+
+.mailbox-tabs {
+  margin-bottom: 16px;
+}
+
+.letter-card {
+  padding: 16px;
+  border: 1px solid var(--md-outline-variant, #eee);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  background: var(--md-surface, #fff);
+  transition: box-shadow 0.2s;
+}
+.letter-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.letter-card.unread {
+  background: var(--md-primary-container, #ecf5ff);
+}
+
+.letter-row {
+  display: flex;
+  justify-content: space-between;
+}
+.letter-time {
+  color: var(--md-outline, #999);
+  font-size: 12px;
+}
+.letter-subject {
+  color: var(--md-on-surface, #333);
+  margin-top: 6px;
+  font-weight: 500;
+}
+.letter-body-preview {
+  color: var(--md-on-surface-variant, #666);
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+}
+</style>

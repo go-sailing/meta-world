@@ -5,6 +5,7 @@ export type { Tool, ToolContext, ToolResult, JsonSchema, LlmToolDefinition } fro
 import { GetTimeTool } from './builtins/get-time.js';
 import { FileReadTool, FileWriteTool, FileListTool, FileDeleteTool } from './builtins/file-tools.js';
 import { SendLetterTool } from './builtins/send-letter.js';
+import { ListAddressBookTool } from './builtins/list-address-book.js';
 import { toolRegistry } from './registry.js';
 
 /** 启动时注册所有内置工具 */
@@ -15,4 +16,5 @@ export function registerAllTools() {
   toolRegistry.register(new FileListTool());
   toolRegistry.register(new FileDeleteTool());
   toolRegistry.register(new SendLetterTool());
+  toolRegistry.register(new ListAddressBookTool());
 }
