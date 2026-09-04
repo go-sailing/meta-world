@@ -26,5 +26,9 @@ server/.env
 .idea/
 .DS_Store
 
+# Trae tooling
+.trae/
+.trae-html-share-packages/
+
 # OS
 Thumbs.db
