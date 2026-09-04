@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from './stores/auth';
+import { authApi } from './api/auth';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -59,15 +60,31 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach((to) => {
+// 启动时做一次 token 校验：过期就清掉，避免 guard 放行后被 API 踢回
+router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
-  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // 保存要去的路径
-    return { path: '/login', query: { redirect: to.fullPath } };
+  // localStorage 有 token 但 store 状态没同步（Pinia 初始值已读 localStorage，所以这里主要校验有效性）
+  if (authStore.token && !authStore.user_id) {
+    // 有 token 但缺 user_id → 不完整，清掉
+    authStore.logout();
   }
 
-  // 已登录用户访问登录页 → 跳首页
+  if (to.meta.requiresAuth) {
+    if (!authStore.isAuthenticated) {
+      return { path: '/login', query: { redirect: to.fullPath } };
+    }
+    // 用 /auth/me 做真正有效性校验；如果失败，清 token 再跳登录
+    try {
+      await authApi.me();
+    } catch {
+      authStore.logout();
+      return { path: '/login', query: { redirect: to.fullPath } };
+    }
+    return true;
+  }
+
+  // 已登录用户访问登录/注册页 → 跳 /agents
   if (!to.meta.requiresAuth && authStore.isAuthenticated &&
       (to.path === '/login' || to.path === '/register')) {
     return { path: '/agents' };
