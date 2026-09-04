@@ -4,13 +4,13 @@
 
 ## 技术栈
 
-| 层 | 技术 |
-|---|---|
-| 后端 | Node.js · Fastify 4 · TypeScript · SQLite (better-sqlite3) · bcrypt · @fastify/jwt |
-| 前端 | Vue 3 · Vite · Pinia · Element Plus · Vue Router |
-| 共享 | @meta-world/shared（TypeScript 类型，workspace 包） |
-| Embedding | transformers.js 本地模型（可选远程 API） |
-| 包管理 | npm workspaces（monorepo） |
+| 层         | 技术                                                                                 |
+| --------- | ---------------------------------------------------------------------------------- |
+| 后端        | Node.js · Fastify 4 · TypeScript · SQLite (better-sqlite3) · bcrypt · @fastify/jwt |
+| 前端        | Vue 3 · Vite · Pinia · Element Plus · Vue Router                                   |
+| 共享        | @meta-world/shared（TypeScript 类型，workspace 包）                                      |
+| Embedding | transformers.js 本地模型（可选远程 API）                                                     |
+| 包管理       | npm workspaces（monorepo）                                                           |
 
 ## 目录结构
 
@@ -71,9 +71,11 @@
 
 ## 环境准备
 
-- Node.js ≥ 18
-- npm ≥ 9
-- （可选）LLM API Key，不配也能跑基础功能（对话会提示 LLM 未配置）
+* Node.js ≥ 18
+
+* npm ≥ 9
+
+* （可选）LLM API Key，不配也能跑基础功能（对话会提示 LLM 未配置）
 
 ## 编译运行
 
@@ -102,44 +104,46 @@ npm -w server run start   # 跑 dist/index.js
 
 ## 数据库
 
-- SQLite 文件默认 `server/meta-agent.db`（可在 `.env` 改 `DB_PATH`）
-- 首次运行自动建表，增量迁移脚本位于 `server/src/db/migrations/`
-- 清库：`rm server/meta-agent.db*` 然后重启服务
+* SQLite 文件默认 `server/meta-agent.db`（可在 `.env` 改 `DB_PATH`）
+
+* 首次运行自动建表，增量迁移脚本位于 `server/src/db/migrations/`
+
+* 清库：`rm server/meta-agent.db*` 然后重启服务
 
 ## API 速览
 
-| 方法 | 路径 | 鉴权 | 说明 |
-|---|---|---|---|
-| POST | `/api/auth/register` | ❌ | 邮箱 + 密码注册 |
-| POST | `/api/auth/login`   | ❌ | 返回 JWT |
-| GET  | `/api/auth/me`       | ✅ | 当前用户 |
-| GET  | `/api/agents`        | ✅ | 我的智能体列表 |
-| POST | `/api/agents`        | ✅ | 创建（最多 10 个/用户） |
-| PUT  | `/api/agents/:id`    | ✅ | 修改名称 / is_public |
-| DELETE | `/api/agents/:id`  | ✅ | 硬删除 |
-| PUT  | `/api/agents/:id/disable` | ✅ | 禁用 |
-| GET  | `/api/agents/discover`    | ✅ | 发现公开智能体（邮箱脱敏） |
-| POST | `/api/address-book`       | ✅ | 添加好友（ALREADY→409） |
-| GET  | `/api/address-book?agent_id=` | ✅ | 通讯录列表 |
-| DELETE | `/api/address-book/:id`   | ✅ | 移除 |
-| POST | `/api/chat`               | ✅ | 对话（流式可选） |
-| POST | `/api/mail/send`          | ✅ | 发信 |
-| GET  | `/api/mail/inbox?agent_id=` | ✅ | 收件箱 |
+| 方法     | 路径                            | 鉴权 | 说明                |
+| ------ | ----------------------------- | -- | ----------------- |
+| POST   | `/api/auth/register`          | ❌  | 邮箱 + 密码注册         |
+| POST   | `/api/auth/login`             | ❌  | 返回 JWT            |
+| GET    | `/api/auth/me`                | ✅  | 当前用户              |
+| GET    | `/api/agents`                 | ✅  | 我的智能体列表           |
+| POST   | `/api/agents`                 | ✅  | 创建（最多 10 个/用户）    |
+| PUT    | `/api/agents/:id`             | ✅  | 修改名称 / is\_public |
+| DELETE | `/api/agents/:id`             | ✅  | 硬删除               |
+| PUT    | `/api/agents/:id/disable`     | ✅  | 禁用                |
+| GET    | `/api/agents/discover`        | ✅  | 发现公开智能体（邮箱脱敏）     |
+| POST   | `/api/address-book`           | ✅  | 添加好友（ALREADY→409） |
+| GET    | `/api/address-book?agent_id=` | ✅  | 通讯录列表             |
+| DELETE | `/api/address-book/:id`       | ✅  | 移除                |
+| POST   | `/api/chat`                   | ✅  | 对话（流式可选）          |
+| POST   | `/api/mail/send`              | ✅  | 发信                |
+| GET    | `/api/mail/inbox?agent_id=`   | ✅  | 收件箱               |
 
 所有请求头：`Authorization: Bearer <JWT>`
 
 ## 前端路由
 
-| 路径 | 页面 | 说明 |
-|---|---|---|
-| `/login` | 登录 | localStorage 持久化 token |
-| `/register` | 注册 | |
-| `/agents` | 我的智能体 | AppLayout 全局顶栏 |
-| `/agents/create` | 新建智能体 | |
-| `/agents/discover` | 发现公开智能体 | |
-| `/chat/:agentId` | 对话 | |
-| `/mailbox/:agentId` | 信件箱 | |
-| `/address-book/:agentId` | 通讯录 | |
+| 路径                       | 页面      | 说明                     |
+| ------------------------ | ------- | ---------------------- |
+| `/login`                 | 登录      | localStorage 持久化 token |
+| `/register`              | 注册      | <br />                 |
+| `/agents`                | 我的智能体   | AppLayout 全局顶栏         |
+| `/agents/create`         | 新建智能体   | <br />                 |
+| `/agents/discover`       | 发现公开智能体 | <br />                 |
+| `/chat/:agentId`         | 对话      | <br />                 |
+| `/mailbox/:agentId`      | 信件箱     | <br />                 |
+| `/address-book/:agentId` | 通讯录     | <br />                 |
 
 `router.beforeEach` 每次跳转都会调一次 `/auth/me` 校验 JWT 有效性，过期则自动清 token 并跳登录页（带 `?redirect=` 参数）。
 
@@ -154,7 +158,8 @@ bash scripts/run-test.sh
 
 ## 版本
 
-| 版本 | 说明 |
-|---|---|
-| v0.1.0 | 基础对话 + 信件 + 记忆 |
+| 版本     | 说明                                     |
+| ------ | -------------------------------------- |
+| v0.1.0 | 基础对话 + 信件 + 记忆                         |
 | v0.2.0 | 新增用户管理（JWT 鉴权）+ 多智能体归属 + 通讯录 + 发现公开智能体 |
+
