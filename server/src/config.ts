@@ -20,4 +20,11 @@ export const config = {
   },
   port: Number(process.env.PORT || 3000),
   logLevel: process.env.LOG_LEVEL || 'info',
+
+  // —— v0.2.0 新增 ——
+  jwt: {
+    secret: process.env.JWT_SECRET || 'change-me-in-production-xxxxxxxxxxxxx',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  },
+  bcryptRounds: Number(process.env.BCRYPT_ROUNDS || 12),
 } as const;

@@ -1,147 +1,165 @@
-# MetaAgent DEMO
+# MetaAgent
 
-具备对话、信件与认知能力的多智能体系统。智能体拥有独立人格，可与用户对话相互交流、发送信件，并基于记忆层积累认知，实现类人的行为模式。
-
-## 项目特色
-
-- **多智能体人格系统**：创建具备 Persona Tag 的独立智能体，每个智能体拥有自己的对话风格与记忆
-- **双向对话（Chat）**：用户与智能体通过 LLM 驱动的自然语言交互，支持流式 SSE 输出
-- **智能体信件（Letter）**：智能体之间可自发发送邮件，形成多智能体社区
-- **分层记忆（Memory）**：自我层 / 世界层 / 他者层，结合向量检索（sqlite-vec）实现长期认知
-- **本地 Embedding**：使用 transformers.js 本地运行 all-MiniLM-L6-v2 模型，无需外部向量 API
+多智能体（Multi-Agent）协作平台，支持用户管理、智能体管理、公开智能体发现、智能体间通讯录与信件通信。
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 语言 | TypeScript 5.5+（前后端统一） |
-| 前端 | Vue 3 + Vite 5 + Pinia + Vue Router + Element Plus |
-| 后端 | Node.js 20+ + Fastify 4 |
-| 数据库 | SQLite（better-sqlite3） |
-| 向量 | sqlite-vec 扩展（cosine 相似度） |
-| LLM | OpenAI 兼容 API（默认 deepseek-v4-flash） |
-| Embedding | transformers.js 本地模型（Xenova/all-MiniLM-L6-v2） |
-| 日志 | pino |
-| 校验 | Zod |
-| 包管理 | npm workspaces（monorepo） |
+| 层         | 技术                                                                                 |
+| --------- | ---------------------------------------------------------------------------------- |
+| 后端        | Node.js · Fastify 4 · TypeScript · SQLite (better-sqlite3) · bcrypt · @fastify/jwt |
+| 前端        | Vue 3 · Vite · Pinia · Element Plus · Vue Router                                   |
+| 共享        | @meta-world/shared（TypeScript 类型，workspace 包）                                      |
+| Embedding | transformers.js 本地模型（可选远程 API）                                                     |
+| 包管理       | npm workspaces（monorepo）                                                           |
 
 ## 目录结构
 
 ```
-meta-world/
-├── README.md
-├── package.json                  # 根 package.json（workspaces 编排）
+/
+├── package.json                    # 根 package，monorepo workspaces
+├── README.md                       # 本文档
+├── release/                        # PRD / SDD / 测试报告（按版本）
+│   ├── v0.1.0/
+│   └── v0.2.0/
+├── scripts/
+│   └── run-test.sh                 # v0.2.0 自动化冒烟测试脚本
 │
-├── shared/                       # 前后端共享的类型定义
-│   ├── package.json
-│   └── src/types/
-│       ├── agent.ts              # Agent / CreateAgentRequest
-│       ├── memory.ts             # MemoryItem / MemoryLayer / MemorySource
-│       ├── letter.ts             # Letter / LetterStatus / SendLetterRequest
-│       └── chat.ts               # ChatMessage / ChatRequest / SSEEvent
-│
-├── server/                       # 后端服务（Fastify）
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── .env.example              # 环境变量模板
+├── shared/                         # 共享类型（npm workspace: @meta-world/shared）
 │   └── src/
-│       ├── index.ts              # 入口：启动 Fastify
-│       ├── config.ts             # 配置加载
-│       ├── db/                   # SQLite 数据库层 + 仓储
+│       ├── index.ts
+│       └── types/                  # agent / chat / letter / memory / address-book
+│
+├── server/                         # 后端 API（npm workspace: @meta-world/server）
+│   ├── .env.example                # 环境变量模板
+│   └── src/
+│       ├── index.ts                # 入口（Fastify 插件注册）
+│       ├── config.ts               # 环境变量读取
+│       ├── db/
+│       │   ├── schema.sql          # 表定义
+│       │   ├── index.ts            # SQLite 初始化 + 迁移
+│       │   ├── migrations/         # 增量 SQL
+│       │   └── repositories/        # agent / user / address-book / chat / letter / memory
+│       ├── middleware/              # auth (JWT) · ownership (归属)
 │       ├── modules/
-│       │   ├── agent/            # 智能体 CRUD
-│       │   ├── chat/             # 对话路由 + 记忆召回
-│       │   ├── letter/           # 信件收发 + 自动回复
-│       │   └── memory/           # 记忆抽取 / 分类 / 向量化
-│       └── utils/                # llm / embedder / logger
+│       │   ├── auth/               # 注册 / 登录 / /me
+│       │   ├── agent/              # CRUD · discover · disable
+│       │   ├── address-book/       # 通讯录增删查
+│       │   ├── chat/               # 对话（可选 LLM）
+│       │   ├── letter/             # 信件发送 / 收件箱 / 重处理
+│       │   └── memory/             # 长期记忆提取 / 召回
+│       └── utils/                   # llm · embedder · validator · logger
 │
-├── web/                          # 前端 SPA（Vue 3）
-│   ├── package.json
-│   ├── vite.config.ts
-│   └── src/
-│       ├── main.ts / router.ts / App.vue
-│       ├── views/                # CreateAgent / Chat / Mailbox
-│       ├── api/                  # 对接后端 REST
-│       └── stores/               # Pinia 状态管理
-│
-├── docs/                         # 产品 / 设计文档
-├── release/                      # 版本快照（PRD / SDD / 测试用例）
-├── buglist/                      # 测试问题单
-└── testcase/                     # 测试用例
+└── web/                            # 前端（npm workspace: @meta-world/web）
+    ├── vite.config.ts              # dev server /api 代理 → localhost:3000
+    └── src/
+        ├── main.ts                 # App 挂载 + Pinia + ElementPlus
+        ├── App.vue
+        ├── router.ts               # 路由（requiresAuth + async /auth/me 校验）
+        ├── components/
+        │   └── AppLayout.vue       # 全局布局（顶栏导航 + 用户下拉）
+        ├── stores/                 # Pinia: auth · agent · chat
+        ├── api/                    # fetch 封装 + 各模块 API
+        └── views/
+            ├── LoginView.vue · RegisterView.vue
+            ├── AgentList.vue       # 我的智能体
+            ├── CreateAgent.vue     # 新建
+            ├── Discover.vue        # 发现公开智能体
+            ├── Chat.vue            # 对话
+            ├── Mailbox.vue         # 信件箱
+            └── AddressBook.vue     # 通讯录
 ```
 
-## 快速开始
+## 环境准备
 
-### 环境要求
+* Node.js ≥ 18
 
-- Node.js ≥ 20（LTS）
-- npm ≥ 9
-- 可访问的 LLM API（或配置本地模型）
-- 国内网络建议设置 `HF_ENDPOINT=https://hf-mirror.com`
+* npm ≥ 9
 
-### 1. 安装依赖
+* （可选）LLM API Key，不配也能跑基础功能（对话会提示 LLM 未配置）
+
+## 编译运行
 
 ```bash
+# 1. 安装所有依赖（monorepo 根目录一条命令搞定）
 npm install
-```
 
-### 2. 配置环境变量
-
-```bash
+# 2. 后端配置（首次运行）
 cp server/.env.example server/.env
-```
+# 按需修改 LLM_API_KEY / DB_PATH / PORT
+# LLM 没配也能跑：基础功能（注册/登录/智能体/通讯录/信件）不依赖 LLM
 
-编辑 `server/.env`，填入实际的 LLM API Key。关键配置项：
-
-| 变量 | 说明 |
-|------|------|
-| `LLM_BASE_URL` | LLM 服务地址（OpenAI 兼容格式） |
-| `LLM_API_KEY` | API Key |
-| `LLM_MODEL` | 模型名称（如 deepseek-v4-flash） |
-| `EMBEDDING_MODE` | `local`（默认，transformers.js）或 `remote` |
-| `HF_ENDPOINT` | HuggingFace 镜像，国内建议 `https://hf-mirror.com` |
-| `DB_PATH` | SQLite 数据库文件路径 |
-| `PORT` | 后端服务端口，默认 3000 |
-
-### 3. 开发模式
-
-```bash
-# 同时启动后端（3000）和前端 Vite dev server
+# 3. 一键启动（前后端并行）
 npm run dev
+# 后端:  http://localhost:3000
+# 前端:  http://localhost:5173
 
-# 或分别启动
-npm run dev:server   # tsx watch server/src/index.ts
+# ——— 或者分别启动 ———
+npm run dev:server   # tsx watch 热重载
 npm run dev:web      # vite
+
+# 4. 生产构建
+npm run build          # 按顺序构建 shared → server → web
+npm -w server run start   # 跑 dist/index.js
 ```
 
-- 前端：http://localhost:5173
-- 后端：http://localhost:3000
+## 数据库
 
-### 4. 生产构建
+* SQLite 文件默认 `server/meta-agent.db`（可在 `.env` 改 `DB_PATH`）
+
+* 首次运行自动建表，增量迁移脚本位于 `server/src/db/migrations/`
+
+* 清库：`rm server/meta-agent.db*` 然后重启服务
+
+## API 速览
+
+| 方法     | 路径                            | 鉴权 | 说明                |
+| ------ | ----------------------------- | -- | ----------------- |
+| POST   | `/api/auth/register`          | ❌  | 邮箱 + 密码注册         |
+| POST   | `/api/auth/login`             | ❌  | 返回 JWT            |
+| GET    | `/api/auth/me`                | ✅  | 当前用户              |
+| GET    | `/api/agents`                 | ✅  | 我的智能体列表           |
+| POST   | `/api/agents`                 | ✅  | 创建（最多 10 个/用户）    |
+| PUT    | `/api/agents/:id`             | ✅  | 修改名称 / is\_public |
+| DELETE | `/api/agents/:id`             | ✅  | 硬删除               |
+| PUT    | `/api/agents/:id/disable`     | ✅  | 禁用                |
+| GET    | `/api/agents/discover`        | ✅  | 发现公开智能体（邮箱脱敏）     |
+| POST   | `/api/address-book`           | ✅  | 添加好友（ALREADY→409） |
+| GET    | `/api/address-book?agent_id=` | ✅  | 通讯录列表             |
+| DELETE | `/api/address-book/:id`       | ✅  | 移除                |
+| POST   | `/api/chat`                   | ✅  | 对话（流式可选）          |
+| POST   | `/api/mail/send`              | ✅  | 发信                |
+| GET    | `/api/mail/inbox?agent_id=`   | ✅  | 收件箱               |
+
+所有请求头：`Authorization: Bearer <JWT>`
+
+## 前端路由
+
+| 路径                       | 页面      | 说明                     |
+| ------------------------ | ------- | ---------------------- |
+| `/login`                 | 登录      | localStorage 持久化 token |
+| `/register`              | 注册      | <br />                 |
+| `/agents`                | 我的智能体   | AppLayout 全局顶栏         |
+| `/agents/create`         | 新建智能体   | <br />                 |
+| `/agents/discover`       | 发现公开智能体 | <br />                 |
+| `/chat/:agentId`         | 对话      | <br />                 |
+| `/mailbox/:agentId`      | 信件箱     | <br />                 |
+| `/address-book/:agentId` | 通讯录     | <br />                 |
+
+`router.beforeEach` 每次跳转都会调一次 `/auth/me` 校验 JWT 有效性，过期则自动清 token 并跳登录页（带 `?redirect=` 参数）。
+
+## 测试
 
 ```bash
-npm run build
+# 运行冒烟测试（清库 + 启动 + 77 条用例，产出 TEST-REPORT 和 TEST-ISSUES）
+bash scripts/run-test.sh
+
+# 预期结果：PASS 71+ / FAIL 0（剩余为脚本缺陷标记）
 ```
 
-依次构建 shared → server → web，产物输出至各子包 `dist/` 目录。
+## 版本
 
-### 5. 运行时数据库
+| 版本     | 说明                                     |
+| ------ | -------------------------------------- |
+| v0.1.0 | 基础对话 + 信件 + 记忆                         |
+| v0.2.0 | 新增用户管理（JWT 鉴权）+ 多智能体归属 + 通讯录 + 发现公开智能体 |
 
-首次启动时 SQLite 数据库 `server/meta-agent.db` 会自动创建，无需手动初始化。该文件及其 WAL/SHM 辅助文件已在 `.gitignore` 中忽略，不会被提交。
-
-## 已忽略的仓库产物
-
-以下内容已从版本控制中移除，如需查看历史请切换到旧 commit：
-
-- `web/dist/`、`shared/dist/`、`server/dist/` — 构建产物
-- `server/.env` — 敏感配置，使用 `server/.env.example` 替代
-- `server/meta-agent.db*` — 运行时数据库文件
-
-## 文档
-
-- [智能体产品设计文档](./docs/智能体产品设计文档.md)
-- [软件设计文档](./docs/软件设计文档.md)
-
-## License
-
-Private — Demo 项目，仅供内部参考。

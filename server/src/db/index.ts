@@ -7,7 +7,6 @@ import { logger } from '../utils/logger.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// 单例数据库连接
 let _db: Database.Database | null = null;
 
 export function getDb(): Database.Database {
@@ -21,15 +20,12 @@ export function getDb(): Database.Database {
   _db.pragma('foreign_keys = ON');
 
   // 加载 sqlite-vec 扩展
-  // better-sqlite3 支持 .loadExtension()，需要扩展 .so 文件
-  // DEMO 阶段我们先尝试加载，如果失败则降级：用纯 SQLite + 简单的 embedding 存储（blob）
   try {
     _db.loadExtension('sqlite-vec');
     logger.info('sqlite-vec extension loaded successfully');
-    _db.exec('CREATE VIRTUAL TABLE IF NOT EXISTS memory_vec USING vec0(embedding float[' + config.embedding.dim + '])');
+    _db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS memory_vec USING vec0(embedding float[${config.embedding.dim}])`);
   } catch (err) {
     logger.warn({ err: (err as Error).message }, 'sqlite-vec not available, will use fallback vector storage');
-    // fallback：用普通 BLOB 列存 embedding，查询时在 Node 层做余弦距离
     _db.exec(`
       CREATE TABLE IF NOT EXISTS memory_vec (
         rowid TEXT PRIMARY KEY,
@@ -38,9 +34,30 @@ export function getDb(): Database.Database {
     `);
   }
 
-  // 执行 schema.sql 建表
-  const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
-  _db.exec(schema);
+  // —— v0.2.0: 迁移逻辑 ——
+  const userTableExists = _db.prepare(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name='user'`
+  ).get();
+
+  if (!userTableExists) {
+    // 全新库：执行完整 schema
+    logger.info('Fresh database detected, applying full schema');
+    const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
+    _db.exec(schema);
+  } else {
+    // 增量库：检查是否缺 address_book 表（v0.1.0 → v0.2.0 标记）
+    const addrTableExists = _db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='address_book'`
+    ).get();
+    if (!addrTableExists) {
+      logger.info('Running migration 002: add user + address_book');
+      const migration = fs.readFileSync(
+        path.join(__dirname, 'migrations', '002_add_user_and_address_book.sql'),
+        'utf-8'
+      );
+      _db.exec(migration);
+    }
+  }
 
   logger.info('Database initialized');
   return _db;

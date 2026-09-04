@@ -1,9 +1,6 @@
 <template>
-  <div style="max-width: 500px; margin: 100px auto;">
-    <h1 style="text-align:center; margin-bottom:8px;">MetaAgent DEMO</h1>
-    <p style="text-align:center; color:#999; margin-bottom:40px;">创建你的第一个智能体</p>
-
-    <el-card>
+  <div class="page">
+    <el-card style="max-width: 500px;">
       <el-form :model="form" :rules="rules" ref="formRef" label-width="100px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="给智能体起个名字" maxlength="20" show-word-limit />
@@ -16,9 +13,18 @@
             placeholder="选择 1-3 个标签"
             filterable
             :max-collapse-tags="2"
+            style="width: 100%"
           >
             <el-option v-for="tag in tagOptions" :key="tag" :label="tag" :value="tag" />
           </el-select>
+        </el-form-item>
+
+        <el-form-item label="公开">
+          <el-switch
+            v-model="form.is_public"
+            active-text="公开（可在发现页被他人看到）"
+            inactive-text="私有（仅自己可见）"
+          />
         </el-form-item>
 
         <el-form-item>
@@ -35,11 +41,9 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
-import { createAgent } from '../api/agent';
-import { useAgentStore } from '../stores/agent';
+import { agentApi } from '../api/agent';
 
 const router = useRouter();
-const store = useAgentStore();
 const formRef = ref<FormInstance>();
 const loading = ref(false);
 
@@ -51,11 +55,18 @@ const tagOptions = [
 const form = reactive({
   name: '',
   persona_tags: [] as string[],
+  is_public: false,
 });
 
 const rules: FormRules = {
-  name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
-  persona_tags: [{ required: true, message: '请至少选一个标签', trigger: 'change' }],
+  name: [
+    { required: true, message: '请输入名称', trigger: 'blur' },
+    { min: 2, max: 20, message: '2-20 字符', trigger: 'blur' },
+  ],
+  persona_tags: [
+    { required: true, message: '请至少选一个标签', trigger: 'change' },
+    { type: 'array', max: 3, message: '最多 3 个标签', trigger: 'change' },
+  ],
 };
 
 async function onSubmit() {
@@ -63,8 +74,7 @@ async function onSubmit() {
   await formRef.value.validate();
   loading.value = true;
   try {
-    const agent = await createAgent(form);
-    store.setAgent(agent);
+    const agent = await agentApi.create(form);
     ElMessage.success('创建成功！');
     router.push(`/chat/${agent.agent_id}`);
   } catch (err: any) {
@@ -74,3 +84,9 @@ async function onSubmit() {
   }
 }
 </script>
+
+<style scoped>
+.page { padding: 24px; max-width: 600px; margin: 0 auto; }
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.topbar h2 { margin: 0; }
+</style>

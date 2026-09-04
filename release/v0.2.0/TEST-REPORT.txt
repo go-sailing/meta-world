@@ -1,0 +1,127 @@
+
+[0;36m===== 0. 服务健康检查 =====[0m
+[0;36m[INFO][0m URL: http://localhost:3000
+[0;32m[PASS][0m TC-0-01 健康检查 (HTTP 200)
+[0;32m[PASS][0m TC-0-02 健康检查 body
+
+[0;36m===== 1. 用户注册 (F1) =====[0m
+[0;32m[PASS][0m TC-F1-01 正常注册 Alice (HTTP 201)
+[0;32m[PASS][0m TC-F1-01 user_id 有效: b7642132-743a-455c-b701-5d96c1539459
+[0;32m[PASS][0m TC-F1-02 重复邮箱 (HTTP 409)
+[0;32m[PASS][0m TC-F1-02 错误码
+[0;32m[PASS][0m TC-F1-03 邮箱格式不合法 (HTTP 400)
+[0;32m[PASS][0m TC-F1-03b 邮箱缺少 local (HTTP 400)
+[0;32m[PASS][0m TC-F1-03c 邮箱缺少域名 (HTTP 400)
+[0;31m[FAIL][0m TC-F1-04 密码不含字母 — 期望 HTTP 400, 实际 429
+[0;31m[FAIL][0m TC-F1-05 密码不含数字 — 期望 HTTP 400, 实际 429
+[0;36m[INFO][0m TC-F1-06 注册限流 (连续注册 6 个)
+[0;32m[PASS][0m TC-F1-06 触发注册限流 (HTTP 429)
+
+[0;36m===== 2. 用户登录 (F2) =====[0m
+[0;32m[PASS][0m TC-F2-01 正常登录 Alice (HTTP 200)
+[0;32m[PASS][0m TC-F2-01 token 已签发
+[0;32m[PASS][0m TC-F2-02 密码错误 (HTTP 401)
+[0;32m[PASS][0m TC-F2-02 错误码
+[0;32m[PASS][0m TC-F2-03 邮箱不存在 (HTTP 401)
+[0;32m[PASS][0m TC-F2-03 错误码一致 (不区分)
+[0;32m[PASS][0m TC-F2-04 无效 token 访问 (HTTP 401)
+[0;36m[INFO][0m TC-F2-05 登录限流 (连续 11 次错误密码)
+[0;32m[PASS][0m TC-F2-05 触发登录限流 (HTTP 429)
+[0;32m[PASS][0m TC-F2-06 /auth/me (HTTP 200)
+[0;32m[PASS][0m TC-F2-06 邮箱正确
+[0;31m[FAIL][0m Bob 登录失败
+
+[0;36m===== 3. JWT 鉴权与路由守卫 =====[0m
+[0;32m[PASS][0m TC-F3-01 无 token (HTTP 401)
+[0;32m[PASS][0m TC-F3-01 错误码
+[0;32m[PASS][0m TC-F3-02 空 Bearer token (HTTP 401)
+[0;32m[PASS][0m TC-F3-02b 伪造 token (HTTP 401)
+
+[0;36m===== 4. 智能体创建 (F4) =====[0m
+[0;32m[PASS][0m TC-F4-01 创建公开智能体 (HTTP 201)
+[0;32m[PASS][0m TC-F4-01 agent_id 已生成: a9244a05-4530-4980-9ec4-7bd2dced82a0
+[0;32m[PASS][0m TC-F4-01 owner_user_id 归属 Alice
+[0;32m[PASS][0m TC-F4-02 创建私有智能体 (HTTP 201)
+[0;32m[PASS][0m TC-F4-02 is_public 默认 false
+[0;32m[PASS][0m TC-F4-03 同用户重名拦截 (HTTP 409)
+[0;32m[PASS][0m TC-F4-03 错误码
+[0;31m[FAIL][0m TC-F4-04 跨用户重名允许 — 期望 HTTP 201, 实际 401
+[0;36m[INFO][0m TC-F4-05 每用户 10 个上限
+[0;32m[PASS][0m TC-F4-05 超过上限拦截 (HTTP 400)
+[0;32m[PASS][0m TC-F4-05 错误码/信息
+
+[0;36m===== 5. 智能体列表/查询 (F5) =====[0m
+[0;32m[PASS][0m TC-F5-01 Alice 列表 (HTTP 200)
+[0;36m[INFO][0m Alice 智能体数量: 10
+[0;32m[PASS][0m TC-F5-01 Alice 至少 2 个智能体
+[0;36m[INFO][0m Bob 智能体数量: 0
+[0;32m[PASS][0m TC-F5-02 跨用户列表隔离
+[0;32m[PASS][0m TC-F5-03 Alice 查自己的 agent 详情 (HTTP 200)
+[0;31m[FAIL][0m TC-F5-04 Bob 查 Alice agent 详情 (403) — 期望 HTTP 403, 实际 401
+
+[0;36m===== 6. 智能体修改 (F6) =====[0m
+[0;32m[PASS][0m TC-F6-01 修改名称 (HTTP 200)
+[0;32m[PASS][0m TC-F6-01 名称已更新为 '天气助手Plus'
+[0;32m[PASS][0m TC-F6-02 私有改公开 (HTTP 200)
+[0;32m[PASS][0m TC-F6-03 部分字段修改 (persona_tags) (HTTP 200)
+[0;32m[PASS][0m TC-F6-04 改名冲突 (Alice 第3 个) (HTTP 409)
+[0;31m[FAIL][0m TC-F6-05 跨用户修改拦截 — 期望 HTTP 403, 实际 401
+
+[0;36m===== 7. 智能体禁用/删除 (F7) =====[0m
+[0;31m[FAIL][0m TC-F7-01 禁用 Bob 第三个 agent — 期望 HTTP 200, 实际 401
+[1;33m[SKIP][0m TC-F7-02 已禁用智能体对话拦截 — 需 LLM, 手工测
+[0;32m[PASS][0m TC-F7-03 硬删除成功 (HTTP 204)
+[0;32m[PASS][0m TC-F7-04 被删后详情不可查 (HTTP 404)
+
+[0;36m===== 8. 公开/私有状态 (F8) =====[0m
+
+[0;36m===== 9. 发现公开智能体 (F9) =====[0m
+[0;31m[FAIL][0m TC-F9-01 discover 分页 — 期望 HTTP 200, 实际 401
+[0;31m[FAIL][0m TC-F9-01 total=-1 异常
+[0;31m[FAIL][0m TC-F9-02 关键词 '天气' — 期望 HTTP 200, 实际 401
+[0;32m[PASS][0m TC-F9-02 返回项都包含关键词
+[0;31m[FAIL][0m TC-F9-03 空结果关键词 — 期望 HTTP 200, 实际 401
+[0;31m[FAIL][0m TC-F9-03 total=-1 (期望 0)
+[0;32m[PASS][0m TC-F9-04 未登录 discover (HTTP 401)
+[0;32m[PASS][0m TC-F9-05 邮箱脱敏格式正确
+
+[0;36m===== 10. 通讯录 (F10/F11) =====[0m
+[0;31m[FAIL][0m TC-F10-01 Bob 添加好友 (B1→A1) — 期望 HTTP 201, 实际 401
+[0;31m[FAIL][0m TC-F10-01 is_mutual=false 初始 — 响应不含 'false\|False', body={"error":"UNAUTHORIZED","message":"Format is Authorization: Bearer [token]"}
+[0;31m[FAIL][0m TC-F10-02 重复添加 — 期望 HTTP 409, 实际 401
+[0;31m[FAIL][0m TC-F10-03 不能加自己 — 期望 HTTP 400, 实际 401
+[0;31m[FAIL][0m TC-F10-05 跨用户使用他人 owner_agent_id — 期望 HTTP 403, 实际 401
+[0;31m[FAIL][0m TC-F11-01 Bob 通讯录 — 期望 HTTP 200, 实际 401
+[0;31m[FAIL][0m TC-F11-01 通讯录为空或异常
+[0;31m[FAIL][0m TC-F11-02 双向标记不正确
+[0;31m[FAIL][0m TC-F11-04 Bob 查 Alice 通讯录 (403) — 期望 HTTP 403, 实际 401
+
+[0;36m===== 11. 跨模块权限隔离 (SEC) =====[0m
+[0;31m[FAIL][0m TC-SEC-01 对话隔离 (Bob 用 Alice agent) — 期望 HTTP 403, 实际 401
+[0;31m[FAIL][0m TC-SEC-02 发信隔离 (Bob 用 Alice from) — 期望 HTTP 403, 实际 401
+[0;31m[FAIL][0m TC-SEC-03 收件箱隔离 (Bob 查 Alice) — 期望 HTTP 403, 实际 401
+
+[0;36m===== 12. 旧功能回归 (REG) =====[0m
+[0;32m[PASS][0m TC-REG-01 HTTP 400
+[0;31m[FAIL][0m TC-REG-02 信件投递 — 期望 HTTP 201, 实际 400
+[0;31m[FAIL][0m TC-REG-02 信件未到达收件箱
+
+[0;36m===== 13. 数据库数据检查 =====[0m
+[0;36m[INFO][0m 数据库: /workspace/server/meta-agent.db
+[0;36m[INFO][0m --- user 表 ---
+b7642132-743a-455c-b701-5d96c1539459|alice@demo.com|$2b$12$Q15...
+[0;36m[INFO][0m --- agent 归属统计 ---
+b7642132-743a-455c-b701-5d96c1539459|9
+[0;36m[INFO][0m --- agent public/private ---
+0|8
+1|1
+[0;36m[INFO][0m --- address_book 统计 ---
+0
+[0;32m[PASS][0m 数据库检查完成
+
+\033[0;36m==================== 测试汇总 ====================\033[0m
+[0;32mPASS: 49[0m
+[0;31mFAIL: 26[0m
+[1;33mSKIP: 1[0m
+TOTAL: 76
+

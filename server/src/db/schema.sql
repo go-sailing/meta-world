@@ -1,13 +1,44 @@
--- 1. 智能体表
-CREATE TABLE IF NOT EXISTS agent (
-    agent_id      TEXT PRIMARY KEY,
-    name          TEXT NOT NULL CHECK(length(name) BETWEEN 2 AND 20),
-    persona_tags  TEXT NOT NULL,
-    created_at    TEXT NOT NULL DEFAULT (datetime('now')),
-    status        TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled'))
-);
+-- ================================================================
+-- MetaAgent v0.2.0 Schema
+-- 全新库直接执行本文件全量建表；增量库走 migrations/002_add_user_and_address_book.sql
+-- ================================================================
 
--- 2. 对话消息表
+-- ------ 1. 用户表 ------
+CREATE TABLE IF NOT EXISTS user (
+    user_id         TEXT PRIMARY KEY,
+    email           TEXT NOT NULL UNIQUE CHECK(length(email) <= 128),
+    password_hash   TEXT NOT NULL,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    last_login_at   TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
+
+-- ------ 2. 智能体表 ------
+CREATE TABLE IF NOT EXISTS agent (
+    agent_id        TEXT PRIMARY KEY,
+    owner_user_id   TEXT REFERENCES user(user_id),
+    name            TEXT NOT NULL CHECK(length(name) BETWEEN 2 AND 20),
+    persona_tags    TEXT NOT NULL,
+    is_public       INTEGER NOT NULL DEFAULT 0,
+    created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+    status          TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','disabled'))
+);
+CREATE INDEX IF NOT EXISTS idx_agent_owner ON agent(owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_agent_public ON agent(is_public, status);
+
+-- ------ 3. 通讯录表 ------
+CREATE TABLE IF NOT EXISTS address_book (
+    entry_id         TEXT PRIMARY KEY,
+    owner_agent_id   TEXT NOT NULL REFERENCES agent(agent_id),
+    target_agent_id  TEXT NOT NULL REFERENCES agent(agent_id),
+    nickname         TEXT CHECK(length(nickname) <= 20),
+    added_at         TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (owner_agent_id, target_agent_id)
+);
+CREATE INDEX IF NOT EXISTS idx_address_book_owner ON address_book(owner_agent_id);
+CREATE INDEX IF NOT EXISTS idx_address_book_target ON address_book(target_agent_id);
+
+-- ------ 4. 对话消息表 ------
 CREATE TABLE IF NOT EXISTS chat_message (
     msg_id     TEXT PRIMARY KEY,
     agent_id   TEXT NOT NULL REFERENCES agent(agent_id),
@@ -17,7 +48,7 @@ CREATE TABLE IF NOT EXISTS chat_message (
 );
 CREATE INDEX IF NOT EXISTS idx_chat_message_agent_time ON chat_message(agent_id, created_at);
 
--- 3. 信件表
+-- ------ 5. 信件表 ------
 CREATE TABLE IF NOT EXISTS letter (
     letter_id      TEXT PRIMARY KEY,
     from_agent_id  TEXT NOT NULL REFERENCES agent(agent_id),
@@ -37,7 +68,7 @@ CREATE TABLE IF NOT EXISTS letter (
 CREATE INDEX IF NOT EXISTS idx_letter_to_status ON letter(to_agent_id, status);
 CREATE INDEX IF NOT EXISTS idx_letter_from ON letter(from_agent_id);
 
--- 4. 记忆条目表（关系型）
+-- ------ 6. 记忆条目表 ------
 CREATE TABLE IF NOT EXISTS memory_item (
     memory_id        TEXT PRIMARY KEY,
     agent_id         TEXT NOT NULL REFERENCES agent(agent_id),
@@ -51,3 +82,5 @@ CREATE TABLE IF NOT EXISTS memory_item (
 );
 CREATE INDEX IF NOT EXISTS idx_memory_agent_layer ON memory_item(agent_id, layer);
 CREATE INDEX IF NOT EXISTS idx_memory_confidence   ON memory_item(confidence);
+
+-- ------ 7. 向量表（sqlite-vec 虚拟表，由 db/index.ts 动态创建） ------
