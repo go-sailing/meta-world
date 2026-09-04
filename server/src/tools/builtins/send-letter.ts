@@ -2,6 +2,14 @@
 import type { Tool, JsonSchema, ToolContext } from '../types.js';
 import { letterService } from '../../modules/letter/service.js';
 import { agentRepo } from '../../db/repositories/agent.repo.js';
+import { addressBookRepo } from '../../db/repositories/address-book.repo.js';
+
+/** 抛出带中文消息的错误 */
+function fail(code: string, message: string): never {
+  const err = new Error(message);
+  (err as any).code = code;
+  throw err;
+}
 
 export class SendLetterTool implements Tool {
   readonly name = 'send_letter';
@@ -21,16 +29,22 @@ export class SendLetterTool implements Tool {
     const targetId = args.target_agent_id;
     const body = args.body;
 
-    if (!targetId) return { success: false, error: 'TARGET_REQUIRED' };
-    if (!body) return { success: false, error: 'BODY_REQUIRED' };
+    if (!targetId) fail('TARGET_REQUIRED', '请指定目标智能体');
+    if (!body) fail('BODY_REQUIRED', '信件正文不能为空');
 
     // 验证目标智能体存在
     const target = agentRepo.getById(targetId);
     if (!target) {
-      return { success: false, error: 'AGENT_NOT_FOUND', detail: `智能体 ${targetId} 不存在` };
+      fail('AGENT_NOT_FOUND', `目标智能体不存在（ID: ${targetId}）`);
     }
 
-    // 发送信件（内部会自动触发 letter processor）
+    // 检查通讯录
+    const inBook = addressBookRepo.findByPair(ctx.agentId, targetId);
+    if (!inBook) {
+      fail('NOT_IN_ADDRESS_BOOK', `「${target.name}」不在通讯录中，请先添加到通讯录后再发送信件`);
+    }
+
+    // 发送信件
     try {
       const letterId = await letterService.send({
         from_agent_id: ctx.agentId,
@@ -39,14 +53,10 @@ export class SendLetterTool implements Tool {
         body,
       });
 
-      return {
-        success: true,
-        letter_id: letterId,
-        to_name: target.name,
-        status: 'sent',
-      };
+      // 直接返回原始数据，不要 success 包装
+      return { letter_id: letterId, to_name: target.name };
     } catch (err: any) {
-      return { success: false, error: 'SEND_FAILED', detail: err?.message || String(err) };
+      fail('SEND_FAILED', `发送失败：${err?.message || String(err)}`);
     }
   }
 }

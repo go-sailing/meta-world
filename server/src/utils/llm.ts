@@ -1,7 +1,18 @@
 import { config } from '../config.js';
 import { logger } from './logger.js';
+import { getProxyAgent } from './global-fetch.js';
 import type { Agent, MemoryItem, ChatMessage } from '@meta-world/shared';
 import type { LlmToolDefinition } from '../tools/types.js';
+
+/** 代理感知的 fetch：有代理时用 undici fetch + dispatcher，否则用 Node 原生 fetch */
+async function llmFetch(url: string, opts: RequestInit): Promise<Response> {
+  const dispatcher = getProxyAgent();
+  if (dispatcher) {
+    const { fetch: undiciFetch } = await import('undici');
+    return undiciFetch(url, { ...opts, dispatcher } as any) as unknown as Response;
+  }
+  return fetch(url, opts);
+}
 
 export interface BuildPromptParams {
   agent: Agent;
@@ -62,7 +73,7 @@ export function buildPrompt(p: BuildPromptParams) {
 /** 非流式调用 */
 export async function llmChat(messages: ReturnType<typeof buildPrompt>): Promise<string> {
   const url = `${config.llm.baseUrl}/chat/completions`;
-  const res = await fetch(url, {
+  const res = await llmFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -90,7 +101,7 @@ export async function llmChat(messages: ReturnType<typeof buildPrompt>): Promise
  */
 export async function* llmStream(messages: ReturnType<typeof buildPrompt>): AsyncGenerator<string> {
   const url = `${config.llm.baseUrl}/chat/completions`;
-  const res = await fetch(url, {
+  const res = await llmFetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -140,7 +151,7 @@ export async function* llmStream(messages: ReturnType<typeof buildPrompt>): Asyn
 }
 
 /**
- * 非流式调用（支持 function calling）
+ * 非流式调用（支持 function calling + 自动重试）
  * 返回结构包含 content 和可选的 tool_calls
  */
 export async function llmChatWithTools(
@@ -158,25 +169,48 @@ export async function llmChatWithTools(
     body.tool_choice = 'auto';
   }
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.llm.apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  // 带重试的 fetch：网络故障时最多重试 3 次
+  const MAX_RETRIES = 3;
+  let lastErr: unknown;
 
-  if (!res.ok) {
-    const err = await res.text();
-    logger.error({ status: res.status, err }, 'LLM API error (tools)');
-    throw new Error(`LLM API failed: ${res.status} ${err}`);
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const res = await llmFetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.llm.apiKey}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        logger.error({ status: res.status, err, attempt }, 'LLM API error (tools)');
+        // 网络类错误或 5xx 可重试
+        if (res.status >= 500 || res.status === 429) {
+          await sleep(1000 * (attempt + 1));
+          continue;
+        }
+        throw new Error(`LLM API failed: ${res.status} ${err}`);
+      }
+
+      const json = await res.json();
+      const msg = json.choices[0].message;
+      return {
+        content: msg.content ?? null,
+        tool_calls: msg.tool_calls,
+      };
+    } catch (err: any) {
+      lastErr = err;
+      logger.warn({ attempt, err: err?.message || String(err) }, 'LLM fetch failed, retrying...');
+      await sleep(1000 * (attempt + 1));
+    }
   }
 
-  const json = await res.json();
-  const msg = json.choices[0].message;
-  return {
-    content: msg.content ?? null,
-    tool_calls: msg.tool_calls,
-  };
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(r => setTimeout(r, ms));
 }

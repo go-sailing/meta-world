@@ -16,11 +16,17 @@ function getUserSandbox(userId: string): string {
 
 /** 安全路径解析（防止路径穿越） */
 function safePath(sandbox: string, userPath: string): string | null {
-  // 移除开头的 / 和 ../ 段
   const clean = userPath.replace(/^\/+/, '').replace(/\.\./g, '').replace(/\\/g, '/');
   const resolved = path.resolve(sandbox, clean);
   if (!resolved.startsWith(sandbox)) return null;
   return resolved;
+}
+
+/** 抛出带中文消息的错误 */
+function fail(code: string, message: string): never {
+  const err = new Error(message);
+  (err as any).code = code;
+  throw err;
 }
 
 // ========== file_read ==========
@@ -40,14 +46,15 @@ export class FileReadTool implements Tool {
     const sandbox = getUserSandbox(ctx.userId);
     const userPath = args.path || '';
     const safe = safePath(sandbox, userPath);
-    if (!safe) return { success: false, error: 'INVALID_PATH' };
+    if (!safe) fail('INVALID_PATH', `路径无效：${userPath}`);
 
     const stat = await fs.stat(safe).catch(() => null);
-    if (!stat) return { success: false, error: 'FILE_NOT_FOUND' };
-    if (stat.isDirectory()) return { success: false, error: 'IS_DIRECTORY' };
-    if (stat.size > MAX_FILE_SIZE) return { success: false, error: 'FILE_TOO_LARGE' };
+    if (!stat) fail('FILE_NOT_FOUND', `文件不存在：${userPath}`);
+    if (stat.isDirectory()) fail('IS_DIRECTORY', `路径是目录不是文件：${userPath}`);
+    if (stat.size > MAX_FILE_SIZE) fail('FILE_TOO_LARGE', `文件过大（超过1MB）：${userPath}`);
 
     const content = await fs.readFile(safe, 'utf-8');
+    // 直接返回原始数据，不要 success 包装
     return { content, size: stat.size, path: userPath };
   }
 }
@@ -70,12 +77,13 @@ export class FileWriteTool implements Tool {
     const sandbox = getUserSandbox(ctx.userId);
     const userPath = args.path || '';
     const safe = safePath(sandbox, userPath);
-    if (!safe) return { success: false, error: 'INVALID_PATH' };
-    if ((args.content || '').length > MAX_FILE_SIZE) return { success: false, error: 'CONTENT_TOO_LARGE' };
+    if (!safe) fail('INVALID_PATH', `路径无效：${userPath}`);
+    if ((args.content || '').length > MAX_FILE_SIZE) fail('CONTENT_TOO_LARGE', `内容过大（超过1MB）`);
 
     await fs.mkdir(path.dirname(safe), { recursive: true });
     await fs.writeFile(safe, args.content, 'utf-8');
-    return { success: true, path: userPath, size: (args.content || '').length };
+    // 直接返回原始数据，不要 success 包装
+    return { path: userPath, size: (args.content || '').length };
   }
 }
 
@@ -95,10 +103,10 @@ export class FileListTool implements Tool {
     const sandbox = getUserSandbox(ctx.userId);
     const dir = args?.directory || '';
     const safe = safePath(sandbox, dir);
-    if (!safe) return { success: false, error: 'INVALID_PATH' };
+    if (!safe) fail('INVALID_PATH', `目录路径无效：${dir}`);
 
     const stat = await fs.stat(safe).catch(() => null);
-    if (!stat) return { success: false, error: 'DIRECTORY_NOT_FOUND' };
+    if (!stat) fail('DIRECTORY_NOT_FOUND', `目录不存在：${dir || '(根目录'}`);
 
     const entries = await fs.readdir(safe, { withFileTypes: true });
     const files = await Promise.all(entries.map(async e => {
@@ -134,13 +142,14 @@ export class FileDeleteTool implements Tool {
     const sandbox = getUserSandbox(ctx.userId);
     const userPath = args.path || '';
     const safe = safePath(sandbox, userPath);
-    if (!safe) return { success: false, error: 'INVALID_PATH' };
+    if (!safe) fail('INVALID_PATH', `路径无效：${userPath}`);
 
     try {
       await fs.unlink(safe);
-      return { success: true, path: userPath };
     } catch {
-      return { success: false, error: 'FILE_NOT_FOUND' };
+      fail('FILE_NOT_FOUND', `文件不存在或无法删除：${userPath}`);
     }
+    // 成功时返回空对象即可，不需要 success
+    return { path: userPath };
   }
 }

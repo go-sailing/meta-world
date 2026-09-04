@@ -28,6 +28,10 @@
         <div v-if="msg.content" class="bubble">
           {{ msg.content }}
         </div>
+        <!-- 空 assistant 消息：加载指示器 -->
+        <div v-else-if="msg.role === 'assistant' && !msg.content && !msg.toolSteps?.length" class="bubble loading">
+          <span class="dots"><span>.</span><span>.</span><span>.</span></span>
+        </div>
       </div>
     </div>
 
@@ -175,6 +179,23 @@ function scrollToBottom() {
   color: #303133;
   border-bottom-left-radius: 4px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+/* 思考中指示器 */
+.bubble.loading {
+  padding: 10px 18px;
+  color: #909399;
+}
+.bubble.loading .dots span {
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out both;
+}
+.bubble.loading .dots span:nth-child(1) { animation-delay: -0.32s; }
+.bubble.loading .dots span:nth-child(2) { animation-delay: -0.16s; }
+.bubble.loading .dots span:nth-child(3) { animation-delay: 0s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
 }
 
 .input-area {
