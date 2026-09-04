@@ -10,6 +10,7 @@ import { getDb } from './db/index.js';
 import { authRoutes } from './modules/auth/route.js';
 import { agentRoutes } from './modules/agent/route.js';
 import { addressBookRoutes } from './modules/address-book/route.js';
+import { memoryRoutes } from './modules/memory/route.js';
 import { chatRoutes } from './modules/chat/route.js';
 import { letterRoutes } from './modules/letter/route.js';
 
@@ -51,6 +52,7 @@ async function bootstrap() {
   app.register(authRoutes,        { prefix: '/api' });
   app.register(addressBookRoutes, { prefix: '/api' });
   app.register(agentRoutes,      { prefix: '/api' });
+  app.register(memoryRoutes,     { prefix: '/api' });
   app.register(chatRoutes,        { prefix: '/api' });
   app.register(letterRoutes,     { prefix: '/api' });
 

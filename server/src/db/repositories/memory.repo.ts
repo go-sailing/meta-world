@@ -14,6 +14,19 @@ interface InsertParams {
   embedding: number[];
 }
 
+export interface MemoryListParams {
+  agent_id: string;
+  layer?: 'all' | 'self' | 'world' | 'other';
+  source?: 'all' | 'dialogue' | 'letter_receive' | 'letter_send';
+  sort?: 'confidence_desc' | 'time_desc';
+  page?: number;
+  size?: number;
+}
+
+export interface MemoryListItem extends MemoryItem {
+  target_agent_name: string | null;
+}
+
 export const memoryRepo = {
   /** 插入记忆条目 + 向量 */
   insertWithVector(p: InsertParams): void {
@@ -91,6 +104,72 @@ export const memoryRepo = {
       };
     });
     return withSim.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
+  },
+
+  /** 查询某个智能体的记忆列表（支持筛选、排序、分页） */
+  listForAgent(params: MemoryListParams): { items: MemoryListItem[]; total: number } {
+    const db = getDb();
+    const {
+      agent_id,
+      layer = 'all',
+      source = 'all',
+      sort = 'confidence_desc',
+      page = 1,
+      size = 20,
+    } = params;
+
+    const where: string[] = ['m.agent_id = ?'];
+    const args: any[] = [agent_id];
+
+    if (layer !== 'all') {
+      where.push('m.layer = ?');
+      args.push(layer);
+    }
+    if (source !== 'all') {
+      where.push('m.source_type = ?');
+      args.push(source);
+    }
+
+    const orderBy =
+      sort === 'time_desc' ? 'm.created_at DESC' : 'm.confidence DESC, m.created_at DESC';
+
+    const whereSql = where.join(' AND ');
+
+    // total count
+    const total = (
+      db.prepare(
+        `SELECT COUNT(*) AS c FROM memory_item m WHERE ${whereSql}`
+      ).get(...args) as any
+    ).c as number;
+
+    // rows with target agent name
+    const offset = (page - 1) * size;
+    const rows = db
+      .prepare(
+        `SELECT m.*, a.name AS target_agent_name
+         FROM memory_item m
+         LEFT JOIN agent a ON a.agent_id = m.target_agent_id
+         WHERE ${whereSql}
+         ORDER BY ${orderBy}
+         LIMIT ? OFFSET ?`
+      )
+      .all(...args, Math.min(size, 200), offset) as any[];
+
+    return {
+      total,
+      items: rows.map(r => ({
+        memory_id: r.memory_id,
+        agent_id: r.agent_id,
+        layer: r.layer,
+        target_agent_id: r.target_agent_id || undefined,
+        target_agent_name: r.target_agent_name,
+        content: r.content,
+        confidence: r.confidence,
+        source_type: r.source_type,
+        source_id: r.source_id,
+        created_at: r.created_at,
+      })),
+    };
   },
 };
 

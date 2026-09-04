@@ -57,6 +57,19 @@ export function getDb(): Database.Database {
       );
       _db.exec(migration);
     }
+
+    // v0.2.0 → v0.3.0: 检查是否缺 letter_process_log 表
+    const lplTableExists = _db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='letter_process_log'`
+    ).get();
+    if (!lplTableExists) {
+      logger.info('Running migration 003: add letter_process_log');
+      const migration = fs.readFileSync(
+        path.join(__dirname, 'migrations', '003_add_letter_process_log.sql'),
+        'utf-8'
+      );
+      _db.exec(migration);
+    }
   }
 
   logger.info('Database initialized');
