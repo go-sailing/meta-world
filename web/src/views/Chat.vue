@@ -147,6 +147,7 @@ import { useRoute } from 'vue-router';
 import { useAgentStore } from '../stores/agent';
 import { useChatStore, type ChatMsg } from '../stores/chat';
 import { useAuthStore } from '../stores/auth';
+import { agentApi } from '../api/agent';
 import { chatStream, getHistory } from '../api/chat';
 import { ElMessage } from 'element-plus';
 import ToolCallCard from '../components/ToolCallCard.vue';
@@ -158,9 +159,21 @@ const authStore = useAuthStore();
 
 const inputMsg = ref('');
 const scrollRef = ref<HTMLDivElement>();
-const agent = store.current;
+const agent = ref<any>(null);
 
 const agentId = computed(() => route.params.agentId as string);
+
+/** 从后端加载 agent 详情（用于标题显示真实名称） */
+async function loadAgent(id: string) {
+  try {
+    const data = await agentApi.get(id);
+    agent.value = data;
+  } catch {
+    // 兜底：尝试从 localStorage 读取
+    store.loadFromStorage();
+    agent.value = store.current;
+  }
+}
 
 /** 从后端加载当前 agent 历史 */
 async function loadHistory(id: string) {
@@ -180,14 +193,17 @@ async function loadHistory(id: string) {
 }
 
 onMounted(() => {
-  if (!store.current) store.loadFromStorage();
   const id = route.params.agentId as string;
-  if (id) loadHistory(id);
+  if (id) {
+    loadAgent(id);
+    loadHistory(id);
+  }
 });
 
 // 切换 agent 时重新加载
 watch(() => route.params.agentId, (newId) => {
   if (newId && newId !== chat.currentAgentId) {
+    loadAgent(newId as string);
     loadHistory(newId as string);
   }
 });
