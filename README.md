@@ -1641,17 +1641,17 @@ export * from './types/address-book';  // v0.2.0 新增
 
 所有 `requiresAuth` 路由嵌套到 `AppLayout.vue`（全局导航栏：品牌 + 我的智能体 + 发现 + 新建 + 用户下拉/退出），登录页和注册页不包 Layout。
 
-| 路径                       | 组件           | 鉴权 | 说明      |
-| ------------------------ | ------------ | -- | ------- |
-| `/login`                 | LoginView    | ❌  | 登录页     |
-| `/register`              | RegisterView | ❌  | 注册页     |
-| `/`                      | → `/agents`  | ✅  | 重定向到主页  |
-| `/agents`                | AgentList    | ✅  | 我的智能体列表 |
-| `/agents/create`         | CreateAgent  | ✅  | 创建智能体   |
-| `/agents/discover`       | Discover     | ✅  | 发现公开智能体 |
-| `/chat/:agentId`         | Chat         | ✅  | 对话页     |
-| `/mailbox/:agentId`      | Mailbox      | ✅  | 信件箱     |
-| `/address-book/:agentId` | AddressBook  | ✅  | 通讯录     |
+| 路径                              | 组件          | 鉴权 | 说明                    |
+| ------------------------------- | ----------- | -- | --------------------- |
+| `/login`                        | LoginView   | ❌  | 登录页                   |
+| `/register`                     | RegisterView| ❌  | 注册页                   |
+| `/`                             | → `/agents` | ✅  | 重定向到主页                |
+| `/agents`                       | AgentList   | ✅  | 我的智能体列表              |
+| `/agents/create`                | CreateAgent | ✅  | 创建智能体                 |
+| `/agents/discover`              | Discover    | ✅  | 发现公开智能体               |
+| `/chat/:agentId`                | Chat        | ✅  | 对话页                   |
+| `/mailbox/:agentId`             | Mailbox     | ✅  | 信件箱                   |
+| `/address-book/:agentId`        | AddressBook | ✅  | 通讯录                   |
 
 > **v0.2.0-02 变更**：采用路由嵌套统一布局；新增 AppLayout 全局导航；路径从 `/agents/:agentId/chat` 扁平化 `/chat/:agentId`（绝对路径）；**取消 AgentDetail 详情页**，改为在 Chat/Mailbox/AddressBook 页面内跳转。
 
@@ -1716,7 +1716,7 @@ router.beforeEach(async (to) => {
 });
 ```
 
-> **v0.2.0-02 变更**：守卫改为 `async`；对所有 `requiresAuth` 路由**主动用** **`/auth/me`** **校验 JWT 有效性**，过期则清 token 后跳登录（不再等首次 API 调用才被动发现）；路由从扁平改为嵌套到 AppLayout。
+> **v0.2.0-02 变更**：守卫改为 `async`；对所有 `requiresAuth` 路由**主动用 `/auth/me` 校验 JWT 有效性**，过期则清 token 后跳登录（不再等首次 API 调用才被动发现）；路由从扁平改为嵌套到 AppLayout。
 
 ### 6.3 Pinia Stores（新增 auth store）
 
@@ -1872,17 +1872,17 @@ export const addressBookApi = {
 
 ### 6.6 前端页面/组件清单（v0.2.0-02 最终版）
 
-| 文件                         | 说明                                       |
-| -------------------------- | ---------------------------------------- |
-| `components/AppLayout.vue` | **新增**全局布局（固定顶栏：品牌 Logo + 导航 + 用户下拉/退出）  |
-| `views/LoginView.vue`      | 登录表单（Element Plus Form + Input + Button） |
-| `views/RegisterView.vue`   | 注册表单（密码强度指示器）                            |
-| `views/AgentList.vue`      | 我的智能体卡片列表（已移除自造 topbar，由 AppLayout 统一导航） |
-| `views/Discover.vue`       | 发现页（搜索框 + 公开智能体卡片 + 一键添加到通讯录）            |
-| `views/Chat.vue`           | 对话页（流式输出，header 补通讯录/信箱快捷跳转）             |
-| `views/Mailbox.vue`        | 信件箱（header 补返回主页面按钮）                     |
-| `views/AddressBook.vue`    | 通讯录列表（双向好友标记 + 快速发信入口）                   |
-| `views/CreateAgent.vue`    | 创建智能体表单（已移除自造"返回"按钮，由 AppLayout 导航覆盖）    |
+| 文件                                    | 说明                                                  |
+| ------------------------------------- | --------------------------------------------------- |
+| `components/AppLayout.vue`            | **新增**全局布局（固定顶栏：品牌 Logo + 导航 + 用户下拉/退出）  |
+| `views/LoginView.vue`                 | 登录表单（Element Plus Form + Input + Button）         |
+| `views/RegisterView.vue`              | 注册表单（密码强度指示器）                                      |
+| `views/AgentList.vue`                 | 我的智能体卡片列表（已移除自造 topbar，由 AppLayout 统一导航）     |
+| `views/Discover.vue`                  | 发现页（搜索框 + 公开智能体卡片 + 一键添加到通讯录）                         |
+| `views/Chat.vue`                      | 对话页（流式输出，header 补通讯录/信箱快捷跳转）                          |
+| `views/Mailbox.vue`                   | 信件箱（header 补返回主页面按钮）                                  |
+| `views/AddressBook.vue`               | 通讯录列表（双向好友标记 + 快速发信入口）                               |
+| `views/CreateAgent.vue`               | 创建智能体表单（已移除自造"返回"按钮，由 AppLayout 导航覆盖）               |
 
 > **v0.2.0-02 变更**：新增 AppLayout.vue；**取消** AgentDetail.vue（设计稿中 Tab 切换页未实现，改为 Chat/Mailbox/AddressBook 独立页面内跳转）；**取消** SendLetterDialog.vue（发信功能通过独立页面触发）；所有子页面删除自造 topbar，导航统一由 AppLayout 承载。
 
@@ -2094,8 +2094,8 @@ interface ErrorResponse {
 
 ## 12. 修订记录
 
-| 版本        | 日期         | 修改内容                                                                                                                                                                                                                                                                                                               | 修改人     |
-| --------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
-| v0.2.0-01 | 2026-09-03 | 初始草稿，覆盖新增 auth/address-book/中间件、改造 agent/chat/letter 模块、shared 类型更新、前端路由与 Pinia 重构                                                                                                                                                                                                                                 | 产品经理智能体 |
+| 版本        | 日期         | 修改内容                                                                                                                                | 修改人     |
+| --------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| v0.2.0-01 | 2026-09-03 | 初始草稿，覆盖新增 auth/address-book/中间件、改造 agent/chat/letter 模块、shared 类型更新、前端路由与 Pinia 重构                                              | 产品经理智能体 |
 | v0.2.0-02 | 2026-09-04 | 修复 BUG × 3 + 体验优化 × 2：① ownership 中间件补 `body.agent_id` 提取（修复 chat 鉴权绕过）；② address-book POST 错误码映射（FORBIDDEN→403/ALREADY→409）；③ maskEmail 固定 3 星脱敏；④ 新增 AppLayout 全局导航栏统一所有页面返回/退出入口；⑤ router beforeEach 改为 async + /auth/me 有效性校验；⑥ request.ts 401 改用 router.replace 软跳转；⑦ rate-limit 阈值 register 5→10、login 10→20 | 开发智能体   |
 
