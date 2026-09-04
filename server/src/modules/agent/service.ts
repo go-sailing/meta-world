@@ -73,6 +73,10 @@ export const agentService = {
     agentRepo.disable(agentId);
   },
 
+  enable(agentId: string) {
+    agentRepo.enable(agentId);
+  },
+
   hardDelete(agentId: string) {
     agentRepo.hardDelete(agentId);
   },

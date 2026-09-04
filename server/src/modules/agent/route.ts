@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { agentService } from './service.js';
-import { verifyAuth, verifyAgentOwnership, getAuthUser } from '../../middleware/index.js';
+import { verifyAuth, verifyAgentOwnership, verifyAgentOwnershipAnyStatus, getAuthUser } from '../../middleware/index.js';
 
 const createBody = {
   type: 'object',
@@ -101,7 +101,7 @@ export async function agentRoutes(app: FastifyInstance) {
   // PUT /api/agents/:id/disable
   app.put(
     '/agents/:id/disable',
-    { preHandler: [verifyAuth, verifyAgentOwnership] },
+    { preHandler: [verifyAuth, verifyAgentOwnershipAnyStatus] },
     async (req, reply) => {
       const id = (req.params as { id: string }).id;
       agentService.disable(id);
@@ -109,10 +109,21 @@ export async function agentRoutes(app: FastifyInstance) {
     }
   );
 
+  // PUT /api/agents/:id/enable
+  app.put(
+    '/agents/:id/enable',
+    { preHandler: [verifyAuth, verifyAgentOwnershipAnyStatus] },
+    async (req, reply) => {
+      const id = (req.params as { id: string }).id;
+      agentService.enable(id);
+      reply.send({ ok: true });
+    }
+  );
+
   // DELETE /api/agents/:id
   app.delete(
     '/agents/:id',
-    { preHandler: [verifyAuth, verifyAgentOwnership] },
+    { preHandler: [verifyAuth, verifyAgentOwnershipAnyStatus] },
     async (req, reply) => {
       const id = (req.params as { id: string }).id;
       agentService.hardDelete(id);

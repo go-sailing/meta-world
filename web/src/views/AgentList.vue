@@ -31,6 +31,9 @@
                   <el-dropdown-item :command="'disable:' + agent.agent_id" v-if="agent.status === 'active'">
                     禁用
                   </el-dropdown-item>
+                  <el-dropdown-item :command="'enable:' + agent.agent_id" v-if="agent.status === 'disabled'">
+                    启用
+                  </el-dropdown-item>
                   <el-dropdown-item :command="'delete:' + agent.agent_id" divided style="color:#f56c6c">
                     删除
                   </el-dropdown-item>
@@ -73,6 +76,9 @@ async function handleAgentCommand(cmd: string, agent: AgentListItem) {
     } else if (cmd.startsWith('disable:')) {
       await agentApi.disable(agent.agent_id);
       ElMessage.success('已禁用');
+    } else if (cmd.startsWith('enable:')) {
+      await agentApi.enable(agent.agent_id);
+      ElMessage.success('已启用');
     } else if (cmd.startsWith('delete:')) {
       await ElMessageBox.confirm('删除后无法恢复，确定要删除该智能体吗？', '危险操作', { type: 'warning' });
       await agentApi.hardDelete(agent.agent_id);
