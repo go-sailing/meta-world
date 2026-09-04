@@ -21,6 +21,23 @@ export const chatRepo = {
     }));
   },
 
+  /** 获取全部对话历史（正序，前端展示用） */
+  listAll(agentId: string): ChatMessage[] {
+    const db = getDb();
+    const rows = db
+      .prepare(
+        `SELECT * FROM chat_message WHERE agent_id = ? ORDER BY created_at ASC`
+      )
+      .all(agentId) as any[];
+    return rows.map(row => ({
+      msg_id: row.msg_id,
+      agent_id: row.agent_id,
+      role: row.role,
+      content: row.content,
+      created_at: row.created_at,
+    }));
+  },
+
   insert(agentId: string, role: 'user' | 'assistant', content: string): string {
     const db = getDb();
     const msgId = randomUUID();

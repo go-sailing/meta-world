@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { chatService } from './service.js';
+import { chatRepo } from '../../db/repositories/chat.repo.js';
 import { verifyAuth, verifyAgentOwnership } from '../../middleware/index.js';
-import { getAuthUser } from '../../middleware/auth.js';
 
 const chatBody = {
   type: 'object',
@@ -13,6 +13,21 @@ const chatBody = {
 } as const;
 
 export async function chatRoutes(app: FastifyInstance) {
+  /** 获取指定智能体的完整对话历史 */
+  app.get(
+    '/chat/history',
+    { preHandler: [verifyAuth, verifyAgentOwnership] },
+    async (req, reply) => {
+      const { agent_id } = req.query as { agent_id: string };
+      if (!agent_id) {
+        reply.code(400).send({ error: 'agent_id is required' });
+        return;
+      }
+      const messages = chatRepo.listAll(agent_id);
+      reply.send({ messages });
+    }
+  );
+
   app.post(
     '/chat',
     {

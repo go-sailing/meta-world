@@ -4,8 +4,8 @@
     <div class="chat-header">
       <div class="agent-name">{{ agent?.name }}</div>
       <div class="header-actions">
-        <el-button link size="small" @click="$router.push(`/memory/${agentId}`)">🧠 记忆</el-button>
-        <el-button link size="small" @click="$router.push(`/mailbox/${agentId}`)">📬 信件</el-button>
+        <el-button link size="small" @click="$router.push(`/memory/${$route.params.agentId}`)">🧠 记忆</el-button>
+        <el-button link size="small" @click="$router.push(`/mailbox/${$route.params.agentId}`)">📬 信件</el-button>
       </div>
     </div>
 
@@ -52,16 +52,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue';
+import { ref, watch, onMounted, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAgentStore } from '../stores/agent';
-import { useChatStore } from '../stores/chat';
-import { chatStream } from '../api/chat';
+import { useChatStore, type ChatMsg } from '../stores/chat';
+import { chatStream, getHistory } from '../api/chat';
 import { ElMessage } from 'element-plus';
 import ToolCallCard from '../components/ToolCallCard.vue';
 
 const route = useRoute();
-const agentId = route.params.agentId as string;
 const store = useAgentStore();
 const chat = useChatStore();
 
@@ -69,17 +68,44 @@ const inputMsg = ref('');
 const scrollRef = ref<HTMLDivElement>();
 const agent = store.current;
 
+/** 从后端加载当前 agent 历史（仅第一次或切换 agent 时） */
+async function loadHistory(agentId: string) {
+  chat.setAgent(agentId);
+  try {
+    const data = await getHistory(agentId);
+    const msgs: ChatMsg[] = data.messages.map((m: any) => ({
+      role: m.role,
+      content: m.content,
+    }));
+    chat.setMessages(agentId, msgs);
+  } catch {
+    // 新 agent 无历史，保持空
+    chat.setMessages(agentId, []);
+  }
+  await nextTick();
+  scrollToBottom();
+}
+
 onMounted(() => {
-  if (!store.current) {
-    store.loadFromStorage();
+  if (!store.current) store.loadFromStorage();
+  const id = route.params.agentId as string;
+  if (id) loadHistory(id);
+});
+
+// 切换 agent 时自动重新加载
+watch(() => route.params.agentId, (newId) => {
+  if (newId && newId !== chat.currentAgentId) {
+    loadHistory(newId as string);
   }
 });
 
 async function send() {
   const msg = inputMsg.value.trim();
-  if (!msg || chat.isStreaming) return;
+  const id = route.params.agentId as string;
+  if (!msg || chat.isStreaming || !id) return;
   inputMsg.value = '';
 
+  chat.setAgent(id);
   chat.push('user', msg);
   chat.isStreaming = true;
 
@@ -89,7 +115,7 @@ async function send() {
 
   try {
     await chatStream(
-      { agent_id: agentId, message: msg },
+      { agent_id: id, message: msg },
       {
         onToken: (t) => { chat.appendLastToken(t); scrollToBottom(); },
         onTools: (steps) => {

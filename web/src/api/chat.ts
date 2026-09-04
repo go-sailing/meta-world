@@ -2,6 +2,20 @@ import type { ChatRequest } from '@meta-world/shared';
 import { useAuthStore } from '../stores/auth';
 import type { ToolStepView } from '../stores/chat';
 
+export async function getHistory(agentId: string): Promise<{ messages: { role: string; content: string }[] }> {
+  const authStore = useAuthStore();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (authStore.token) headers['Authorization'] = `Bearer ${authStore.token}`;
+
+  const res = await fetch(`/api/chat/history?agent_id=${encodeURIComponent(agentId)}`, { headers });
+  if (res.status === 401) {
+    authStore.logout();
+    window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+  }
+  if (!res.ok) throw new Error('加载历史失败');
+  return res.json();
+}
+
 export async function chatStream(
   params: ChatRequest,
   handlers: {
