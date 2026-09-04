@@ -1,12 +1,12 @@
 # SDD：MetaAgent v0.5.0 — 软件设计文档
 
-| 文档信息 | 内容 |
-| ---- | ---------- |
-| 版本 | v0.5.0 |
-| 日期 | 2026-09-04 |
-| 状态 | 草稿 |
+| 文档信息   | 内容                                                                     |
+| ------ | ---------------------------------------------------------------------- |
+| 版本     | v0.5.0                                                                 |
+| 日期     | 2026-09-04                                                             |
+| 状态     | 草稿                                                                     |
 | 对应 PRD | [PRD-v0.5.0-Material-Design-UI.md](./PRD-v0.5.0-Material-Design-UI.md) |
-| 前置 SDD | v0.4.0 |
+| 前置 SDD | v0.4.0                                                                 |
 
 > **v0.4.0 → v0.5.0 变更说明**：本期为纯前端 UI 升级，后端零改动。核心工作是引入全局 MD Design Token、覆盖 Element Plus 主题变量、重构智能体卡片和聊天页。预计前端代码改动约 1200 行（新增 800 行 MD 主题 CSS，重构 400 行 Vue 模板）。
 
@@ -18,11 +18,11 @@
 
 v0.5.0 **不引入任何新依赖**。Material Design 风格完全通过以下方式实现：
 
-| 方式 | 说明 |
-| ---- | ---- |
-| CSS 变量覆盖 | 在 `:root` 中定义 MD3 Token，覆盖 Element Plus 的 `--el-*` 变量 |
-| Element Plus 主题变量 | EP 使用 CSS 变量，只需覆盖 `--el-color-primary` 等即可改主色 |
-| 自定义组件样式 | 对 EP 不支持的 MD 特性（如 shape、elevation）编写自定义 CSS |
+| 方式                | 说明                                                    |
+| ----------------- | ----------------------------------------------------- |
+| CSS 变量覆盖          | 在 `:root` 中定义 MD3 Token，覆盖 Element Plus 的 `--el-*` 变量 |
+| Element Plus 主题变量 | EP 使用 CSS 变量，只需覆盖 `--el-color-primary` 等即可改主色         |
+| 自定义组件样式           | 对 EP 不支持的 MD 特性（如 shape、elevation）编写自定义 CSS           |
 
 ### 1.2 文件组织
 
@@ -1313,7 +1313,7 @@ a:hover {
 
 ## 6. 登录/注册页 MD 化设计
 
-### 6.1 LoginView.vue 布局
+### 6.1 LoginView\.vue 布局
 
 ```vue
 <!-- web/src/views/LoginView.vue -->
@@ -1565,37 +1565,38 @@ app.mount('#app');
 
 Element Plus Icons 中找到对应图标的组件名：
 
-| MD 入口 | 图标 | EP 组件名 |
-| ------- | ---- | --------- |
-| 返回 | ← | `ArrowLeft` |
-| 邮件 | ✉️ | `Message` |
-| 记忆 | 🧠 | `Cpu` |
-| 通讯录 | 📒 | `AddressBook` |
-| 设置 | ⚙️ | `Setting` |
-| 发送 | ↑ | `Promotion` |
-| 菜单 | ☰ | `Menu` |
-| 发现 | 🔍 | `Search` |
-| 新建 | + | `Plus` |
-| 聊天 | 💬 | `ChatLineSquare` |
+| MD 入口 | 图标 | EP 组件名           |
+| ----- | -- | ---------------- |
+| 返回    | ←  | `ArrowLeft`      |
+| 邮件    | ✉️ | `Message`        |
+| 记忆    | 🧠 | `Cpu`            |
+| 通讯录   | 📒 | `AddressBook`    |
+| 设置    | ⚙️ | `Setting`        |
+| 发送    | ↑  | `Promotion`      |
+| 菜单    | ☰  | `Menu`           |
+| 发现    | 🔍 | `Search`         |
+| 新建    | +  | `Plus`           |
+| 聊天    | 💬 | `ChatLineSquare` |
 
 ***
 
 ## 9. 风险与注意事项
 
-| # | 风险点 | 应对方案 |
-| -- | ------ | -------- |
-| R1 | Element Plus 内部硬编码了非 CSS 变量的颜色 | 全局 CSS 选择器强制覆盖，`!important` 保底 |
-| R2 | EP 组件的 box-sizing 不一致 | `global.css` 开头统一 `box-sizing: border-box` |
-| R3 | 自定义 md-icon-btn 与 EP el-button 样式冲突 | md-icon-btn 使用原生 `<button>`，不走 EP 组件 |
-| R4 | 图标按钮 48×48 热区可能挤压布局 | 使用 flex 布局 + `min-width: 48px` 确保不被压缩 |
-| R5 | Material 颜色对比度可能不满足 WCAG | 使用 MD3 官方 color tokens（已由 Material 团队验证过对比度） |
-| R6 | 旧浏览器不支持 CSS Grid | `agent-grid` 使用 `grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))`，兼容 Chrome 57+ |
-| R7 | 卡片点击与徽章点击事件冒泡 | 使用 `@click.stop` 阻止冒泡 |
+| #  | 风险点                                 | 应对方案                                                                                         |
+| -- | ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| R1 | Element Plus 内部硬编码了非 CSS 变量的颜色      | 全局 CSS 选择器强制覆盖，`!important` 保底                                                               |
+| R2 | EP 组件的 box-sizing 不一致               | `global.css` 开头统一 `box-sizing: border-box`                                                   |
+| R3 | 自定义 md-icon-btn 与 EP el-button 样式冲突 | md-icon-btn 使用原生 `<button>`，不走 EP 组件                                                         |
+| R4 | 图标按钮 48×48 热区可能挤压布局                 | 使用 flex 布局 + `min-width: 48px` 确保不被压缩                                                        |
+| R5 | Material 颜色对比度可能不满足 WCAG            | 使用 MD3 官方 color tokens（已由 Material 团队验证过对比度）                                                 |
+| R6 | 旧浏览器不支持 CSS Grid                    | `agent-grid` 使用 `grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))`，兼容 Chrome 57+ |
+| R7 | 卡片点击与徽章点击事件冒泡                       | 使用 `@click.stop` 阻止冒泡                                                                        |
 
 ***
 
 ## 10. 修订记录
 
-| 版本 | 日期 | 修改内容 | 修改人 |
-| ---- | ---- | -------- | ------ |
+| 版本        | 日期         | 修改内容 | 修改人     |
+| --------- | ---------- | ---- | ------- |
 | v0.5.0-01 | 2026-09-04 | 初始草稿 | 产品经理智能体 |
+
