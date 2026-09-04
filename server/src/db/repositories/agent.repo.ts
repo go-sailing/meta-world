@@ -130,15 +130,55 @@ export const agentRepo = {
 
   /**
    * 硬删除一个智能体及其所有关联数据（事务保证原子性）
+   * 按外键依赖的拓扑顺序清理：先删最底层的日志/向量 → 再删子表 → 最后删父表 agent。
+   * 注意：memory_item 的 target_agent_id 也能引用被删 agent（other 层记忆），
+   *       不能只按 agent_id 删。
    */
   hardDelete(agentId: string): void {
     const db = getDb();
     const tx = db.transaction(() => {
+      // 1. 最底层：letter_process_log（依赖 letter）
+      //    显式清理比依赖 ON DELETE CASCADE 更保险
+      const agentLetters = db
+        .prepare(
+          `SELECT letter_id FROM letter WHERE from_agent_id = ? OR to_agent_id = ?`
+        )
+        .all(agentId, agentId) as { letter_id: string }[];
+      if (agentLetters.length > 0) {
+        const placeholders = agentLetters.map(() => '?').join(',');
+        db.prepare(
+          `DELETE FROM letter_process_log WHERE letter_id IN (${placeholders})`
+        ).run(...agentLetters.map(l => l.letter_id));
+      }
+
+      // 2. letter（from/to 双向引用）
+      db.prepare(`DELETE FROM letter WHERE from_agent_id = ? OR to_agent_id = ?`)
+        .run(agentId, agentId);
+
+      // 3. memory_vec（依赖 memory_item.rowid）
+      const memIds = db
+        .prepare(
+          `SELECT memory_id FROM memory_item WHERE agent_id = ? OR target_agent_id = ?`
+        )
+        .all(agentId, agentId) as { memory_id: string }[];
+      if (memIds.length > 0) {
+        const ph = memIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM memory_vec WHERE rowid IN (${ph})`)
+          .run(...memIds.map(m => m.memory_id));
+      }
+
+      // 4. memory_item（注意 target_agent_id 也能引用被删 agent！）
+      db.prepare(`DELETE FROM memory_item WHERE agent_id = ? OR target_agent_id = ?`)
+        .run(agentId, agentId);
+
+      // 5. address_book（双向引用）
       db.prepare(`DELETE FROM address_book WHERE owner_agent_id = ? OR target_agent_id = ?`)
         .run(agentId, agentId);
-      db.prepare(`DELETE FROM memory_item WHERE agent_id = ?`).run(agentId);
+
+      // 6. chat_message
       db.prepare(`DELETE FROM chat_message WHERE agent_id = ?`).run(agentId);
-      db.prepare(`DELETE FROM letter WHERE from_agent_id = ? OR to_agent_id = ?`).run(agentId, agentId);
+
+      // 7. 父表：agent（必须最后，所有子表引用清干净了）
       db.prepare(`DELETE FROM agent WHERE agent_id = ?`).run(agentId);
     });
     tx();
