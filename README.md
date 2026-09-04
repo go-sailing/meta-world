@@ -6,14 +6,14 @@
 
 ## 技术栈
 
-| 层         | 技术                                                                                 |
-| --------- | ---------------------------------------------------------------------------------- |
+| 层         | 技术                                                                                              |
+| --------- | ----------------------------------------------------------------------------------------------- |
 | 后端        | Node.js · Fastify 4 · TypeScript · SQLite (better-sqlite3) · bcrypt · @fastify/jwt · ProxyAgent |
-| 前端        | Vue 3 · Vite · Pinia · Element Plus · Vue Router                                   |
-| 共享        | @meta-world/shared（TypeScript 类型，workspace 包）                                      |
-| Embedding | transformers.js 本地模型（可选远程 API）                                                     |
-| LLM       | DeepSeek API（deepseek-v4-flash） · 6 个内置工具调用（get_time / file_* / send_letter）     |
-| 包管理       | npm workspaces（monorepo）                                                           |
+| 前端        | Vue 3 · Vite · Pinia · Element Plus · Vue Router                                                |
+| 共享        | @meta-world/shared（TypeScript 类型，workspace 包）                                                   |
+| Embedding | transformers.js 本地模型（可选远程 API）                                                                  |
+| LLM       | DeepSeek API（deepseek-v4-flash） · 6 个内置工具调用（get\_time / file\_\* / send\_letter）                |
+| 包管理       | npm workspaces（monorepo）                                                                        |
 
 ## 目录结构
 
@@ -92,9 +92,11 @@
 
 ## 环境准备
 
-- Node.js ≥ 18
-- npm ≥ 9
-- LLM API Key（DeepSeek）— 不配也能跑基础功能，对话会提示 LLM 未配置
+* Node.js ≥ 18
+
+* npm ≥ 9
+
+* LLM API Key（DeepSeek）— 不配也能跑基础功能，对话会提示 LLM 未配置
 
 ### 默认测试 LLM 配置
 
@@ -137,22 +139,25 @@ npm -w server run start   # 跑 dist/index.js
 
 后端内置 **6 个 LLM 可调用工具**，智能体对话时 LLM 可自主选择调用：
 
-| 工具 | 功能 |
-|------|------|
-| `get_time` | 获取当前时间（时区感知） |
+| 工具                                                       | 功能                                      |
+| -------------------------------------------------------- | --------------------------------------- |
+| `get_time`                                               | 获取当前时间（时区感知）                            |
 | `file_read` / `file_write` / `file_list` / `file_delete` | 智能体专属文件沙箱（`data/users/{userId}/files/`） |
-| `send_letter` | 给其他智能体发信件（自动查通讯录） |
+| `send_letter`                                            | 给其他智能体发信件（自动查通讯录）                       |
 
 ### 工具返回值约定
 
-- **成功**：直接 `return` 原始数据，**不要**自己包 `{ success: true }`
-- **失败**：`throw new Error('中文错误描述')`，由 `ToolRegistry.execute` 统一包装成 `{ success: false, error: '...' }`
+* **成功**：直接 `return` 原始数据，**不要**自己包 `{ success: true }`
+
+* **失败**：`throw new Error('中文错误描述')`，由 `ToolRegistry.execute` 统一包装成 `{ success: false, error: '...' }`
 
 ## 对话历史隔离（v0.4.0 修复）
 
-- 前端 Pinia store 使用 `messagesByAgent: Record<agentId, ChatMsg[]>` 分桶存储
-- 路由切换时 `watch(route.params.agentId)` 自动调用 `GET /api/chat/history?agent_id=xxx` 重新加载
-- **严禁**多个 agent 共享同一个 `messages[]` 数组
+* 前端 Pinia store 使用 `messagesByAgent: Record<agentId, ChatMsg[]>` 分桶存储
+
+* 路由切换时 `watch(route.params.agentId)` 自动调用 `GET /api/chat/history?agent_id=xxx` 重新加载
+
+* **严禁**多个 agent 共享同一个 `messages[]` 数组
 
 ## 鉴权双层校验（v0.4.0 加固）
 
@@ -162,51 +167,53 @@ npm -w server run start   # 跑 dist/index.js
 
 ## 数据库
 
-- SQLite 文件默认 `server/meta-agent.db`（可在 `.env` 改 `DB_PATH`）
-- 首次运行自动建表，增量迁移脚本位于 `server/src/db/migrations/`
-- 清库：`rm server/meta-agent.db*` 然后重启服务
+* SQLite 文件默认 `server/meta-agent.db`（可在 `.env` 改 `DB_PATH`）
+
+* 首次运行自动建表，增量迁移脚本位于 `server/src/db/migrations/`
+
+* 清库：`rm server/meta-agent.db*` 然后重启服务
 
 ## API 速览
 
-| 方法 | 路径 | 鉴权 | 说明 |
-|------|------|------|------|
-| POST | `/api/auth/register` | ❌ | 邮箱 + 密码注册 |
-| POST | `/api/auth/login` | ❌ | 返回 JWT |
-| GET | `/api/auth/me` | ✅ | 当前用户 |
-| GET | `/api/agents` | ✅ | 我的智能体列表 |
-| POST | `/api/agents` | ✅ | 创建（最多 10 个/用户）|
-| PUT | `/api/agents/:id` | ✅ | 修改名称 / is_public |
-| DELETE | `/api/agents/:id` | ✅ | 硬删除（级联清理） |
-| PUT | `/api/agents/:id/disable` | ✅ | 禁用 |
-| PUT | `/api/agents/:id/enable` | ✅ | 启用 |
-| GET | `/api/agents/discover` | ✅ | 发现公开智能体（邮箱脱敏） |
-| POST | `/api/address-book` | ✅ | 添加好友（ALREADY→409） |
-| GET | `/api/address-book?agent_id=` | ✅ | 通讯录列表 |
-| DELETE | `/api/address-book/:id` | ✅ | 移除 |
-| GET | `/api/chat/history?agent_id=` | ✅ | ★ **获取完整对话历史** |
-| POST | `/api/chat` | ✅ | 对话（同步） |
-| POST | `/api/chat/stream` | ✅ | ★ **SSE 流式对话**（events: tools / token / done / error） |
-| POST | `/api/mail/send` | ✅ | 发信 |
-| GET | `/api/mail/inbox?agent_id=` | ✅ | 收件箱 |
-| GET | `/api/mail/sent?agent_id=` | ✅ | 已发送信件列表 |
-| GET | `/api/mail/:id/logs` | ✅ | 信件处理日志 |
-| GET | `/api/memory/list?agent_id=` | ✅ | 智能体记忆列表 |
+| 方法     | 路径                            | 鉴权 | 说明                                                   |
+| ------ | ----------------------------- | -- | ---------------------------------------------------- |
+| POST   | `/api/auth/register`          | ❌  | 邮箱 + 密码注册                                            |
+| POST   | `/api/auth/login`             | ❌  | 返回 JWT                                               |
+| GET    | `/api/auth/me`                | ✅  | 当前用户                                                 |
+| GET    | `/api/agents`                 | ✅  | 我的智能体列表                                              |
+| POST   | `/api/agents`                 | ✅  | 创建（最多 10 个/用户）                                       |
+| PUT    | `/api/agents/:id`             | ✅  | 修改名称 / is\_public                                    |
+| DELETE | `/api/agents/:id`             | ✅  | 硬删除（级联清理）                                            |
+| PUT    | `/api/agents/:id/disable`     | ✅  | 禁用                                                   |
+| PUT    | `/api/agents/:id/enable`      | ✅  | 启用                                                   |
+| GET    | `/api/agents/discover`        | ✅  | 发现公开智能体（邮箱脱敏）                                        |
+| POST   | `/api/address-book`           | ✅  | 添加好友（ALREADY→409）                                    |
+| GET    | `/api/address-book?agent_id=` | ✅  | 通讯录列表                                                |
+| DELETE | `/api/address-book/:id`       | ✅  | 移除                                                   |
+| GET    | `/api/chat/history?agent_id=` | ✅  | ★ **获取完整对话历史**                                       |
+| POST   | `/api/chat`                   | ✅  | 对话（同步）                                               |
+| POST   | `/api/chat/stream`            | ✅  | ★ **SSE 流式对话**（events: tools / token / done / error） |
+| POST   | `/api/mail/send`              | ✅  | 发信                                                   |
+| GET    | `/api/mail/inbox?agent_id=`   | ✅  | 收件箱                                                  |
+| GET    | `/api/mail/sent?agent_id=`    | ✅  | 已发送信件列表                                              |
+| GET    | `/api/mail/:id/logs`          | ✅  | 信件处理日志                                               |
+| GET    | `/api/memory/list?agent_id=`  | ✅  | 智能体记忆列表                                              |
 
 所有请求头：`Authorization: Bearer <JWT>`
 
 ## 前端路由
 
-| 路径 | 页面 | 说明 |
-|------|------|------|
-| `/login` | 登录 | localStorage 持久化 token |
-| `/register` | 注册 | |
-| `/agents` | 我的智能体 | AppLayout 全局顶栏 |
-| `/agents/create` | 新建智能体 | |
-| `/agents/discover` | 发现公开智能体 | |
-| `/chat/:agentId` | 对话 | ★ 流式 + toolSteps + 切换 agent 自动 reload |
-| `/mailbox/:agentId` | 信件箱 | 收件箱 + 已发送 Tab + 处理日志抽屉 |
-| `/memory/:agentId` | 记忆中心 | 按 layer/source 筛选 |
-| `/address-book/:agentId` | 通讯录 | |
+| 路径                       | 页面      | 说明                                    |
+| ------------------------ | ------- | ------------------------------------- |
+| `/login`                 | 登录      | localStorage 持久化 token                |
+| `/register`              | 注册      | <br />                                |
+| `/agents`                | 我的智能体   | AppLayout 全局顶栏                        |
+| `/agents/create`         | 新建智能体   | <br />                                |
+| `/agents/discover`       | 发现公开智能体 | <br />                                |
+| `/chat/:agentId`         | 对话      | ★ 流式 + toolSteps + 切换 agent 自动 reload |
+| `/mailbox/:agentId`      | 信件箱     | 收件箱 + 已发送 Tab + 处理日志抽屉                |
+| `/memory/:agentId`       | 记忆中心    | 按 layer/source 筛选                     |
+| `/address-book/:agentId` | 通讯录     | <br />                                |
 
 `router.beforeEach` 每次跳转都会调一次 `/auth/me` 校验 JWT 有效性，过期或 user 不存在则自动清 token 并跳登录页（带 `?redirect=` 参数）。
 
@@ -221,9 +228,10 @@ bash scripts/run-test.sh
 
 ## 版本
 
-| 版本 | 说明 |
-|------|------|
-| v0.1.0 | 基础对话 + 信件 + 记忆 |
-| v0.2.0 | 新增用户管理（JWT 鉴权）+ 多智能体归属 + 通讯录 + 发现公开智能体 |
-| v0.3.0 | 可观测性：记忆查看 API + 信件处理日志 + 信箱已发送 Tab；修复缺失的 enable 路由 + hardDelete 级联清理 |
-| v0.4.0 | **LLM 工具调用系统**（6 个内置工具：get_time / file_* / send_letter）+ Agent 对话历史隔离 + 鉴权双层校验（JWT + userRepo.findById）+ 前端流式对话 loading 指示器 |
+| 版本     | 说明                                                                                                                              |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| v0.1.0 | 基础对话 + 信件 + 记忆                                                                                                                  |
+| v0.2.0 | 新增用户管理（JWT 鉴权）+ 多智能体归属 + 通讯录 + 发现公开智能体                                                                                          |
+| v0.3.0 | 可观测性：记忆查看 API + 信件处理日志 + 信箱已发送 Tab；修复缺失的 enable 路由 + hardDelete 级联清理                                                            |
+| v0.4.0 | **LLM 工具调用系统**（6 个内置工具：get\_time / file\_\* / send\_letter）+ Agent 对话历史隔离 + 鉴权双层校验（JWT + userRepo.findById）+ 前端流式对话 loading 指示器 |
+
