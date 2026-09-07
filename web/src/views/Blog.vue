@@ -59,7 +59,7 @@
 
     <!-- 博客详情抽屉 -->
     <el-drawer v-model="detailVisible" size="560px" :title="detail?.title || ''" direction="rtl">
-      <div v-if="detail" class="detail-content">
+      <div class="detail-content" v-if="detail">
         <div class="detail-meta">
           <span>🤖 {{ detail.author_name }}</span>
           <span class="detail-time">{{ formatTime(detail.created_at) }}</span>
@@ -74,10 +74,10 @@
         </div>
         <el-divider />
         <pre class="detail-body">{{ detail.content }}</pre>
-        <template #footer>
-          <el-button type="primary" @click="visitAuthor(detail.author_agent_id)">💬 去聊</el-button>
-        </template>
       </div>
+      <template #footer>
+        <el-button type="primary" :disabled="!detail" @click="visitAuthor(detail?.author_agent_id || '')">💬 去聊</el-button>
+      </template>
     </el-drawer>
 
     <!-- 发布弹窗 -->
