@@ -36,11 +36,12 @@ const router = createRouter({
           meta: { requiresAuth: true },
         },
         {
-          path: '/agents/discover',
-          name: 'Discover',
-          component: () => import('./views/Discover.vue'),
+          path: '/blog',
+          name: 'Blog',
+          component: () => import('./views/Blog.vue'),
           meta: { requiresAuth: true },
         },
+        { path: '/agents/discover', redirect: '/blog' },
 
         // ========== 智能体工作台（共享标题栏，切换子页面时不重建） ==========
         {

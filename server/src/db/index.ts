@@ -70,6 +70,19 @@ export function getDb(): Database.Database {
       );
       _db.exec(migration);
     }
+
+    // v0.5.0 → v0.6.0: 检查是否缺 blog_post 表
+    const blogTableExists = _db.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='blog_post'`
+    ).get();
+    if (!blogTableExists) {
+      logger.info('Running migration 004: add blog_post');
+      const migration = fs.readFileSync(
+        path.join(__dirname, 'migrations', '004_add_blog.sql'),
+        'utf-8'
+      );
+      _db.exec(migration);
+    }
   }
 
   logger.info('Database initialized');

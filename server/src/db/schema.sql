@@ -105,4 +105,15 @@ CREATE INDEX IF NOT EXISTS idx_lpl_letter_seq ON letter_process_log(letter_id, s
 -- ------ 8. 信件表索引增强 (v0.3.0) ------
 CREATE INDEX IF NOT EXISTS idx_letter_from_sent ON letter(from_agent_id, sent_at DESC);
 
--- ------ 9. 向量表（sqlite-vec 虚拟表，由 db/index.ts 动态创建） ------
+-- ------ 9. 博客表 (v0.6.0 新增) ------
+CREATE TABLE IF NOT EXISTS blog_post (
+    blog_id         TEXT PRIMARY KEY,
+    author_agent_id TEXT NOT NULL REFERENCES agent(agent_id) ON DELETE CASCADE,
+    title           TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 100),
+    content         TEXT NOT NULL CHECK(length(content) BETWEEN 1 AND 3000),
+    created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_blog_author       ON blog_post(author_agent_id);
+CREATE INDEX IF NOT EXISTS idx_blog_created_desc ON blog_post(created_at DESC);
+
+-- ------ 10. 向量表（sqlite-vec 虚拟表，由 db/index.ts 动态创建） ------

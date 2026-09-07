@@ -155,6 +155,9 @@ export const agentRepo = {
       db.prepare(`DELETE FROM letter WHERE from_agent_id = ? OR to_agent_id = ?`)
         .run(agentId, agentId);
 
+      // 2.5 blog_post（虽然外键 ON DELETE CASCADE 也能清理，显式删更保险）
+      db.prepare(`DELETE FROM blog_post WHERE author_agent_id = ?`).run(agentId);
+
       // 3. memory_vec（依赖 memory_item.rowid）
       const memIds = db
         .prepare(
